@@ -10,21 +10,19 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import {
   PhoneAuthProvider,
   signInWithCredential,
+  RecaptchaVerifier,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { saveUserSession, getBiometricEnabled, setBiometricEnabled } from '@/lib/storage';
+import { saveUserSession, getUserSession, getBiometricEnabled, setBiometricEnabled } from '@/lib/storage';
 import { COLORS } from '@/lib/theme';
 import { UserRole } from '@/lib/types';
 import * as LocalAuthentication from 'expo-local-authentication';
-import Constants from 'expo-constants';
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
@@ -38,17 +36,7 @@ export default function LoginScreen() {
   const [showBiometricModal, setShowBiometricModal] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
 
-  const recaptchaVerifierRef = useRef<FirebaseRecaptchaVerifierModal>(null);
-  const confirmationResultRef = useRef<any>(null);
-
-  const firebaseConfig = {
-    apiKey: Constants.expoConfig?.extra?.firebaseApiKey,
-    authDomain: Constants.expoConfig?.extra?.firebaseAuthDomain,
-    projectId: Constants.expoConfig?.extra?.firebaseProjectId,
-    storageBucket: Constants.expoConfig?.extra?.firebaseStorageBucket,
-    messagingSenderId: Constants.expoConfig?.extra?.firebaseMessagingSenderId,
-    appId: Constants.expoConfig?.extra?.firebaseAppId,
-  };
+  const verificationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     checkBiometricLogin();
@@ -77,9 +65,8 @@ export default function LoginScreen() {
       });
 
       if (result.success) {
-        const { getUserSession } = await import('@/lib/storage');
         const session = await getUserSession();
-        if (session.role && session.phone) {
+        if (session && session.role && session.phone) {
           navigateByRole(session.role as UserRole);
           return;
         }
@@ -93,18 +80,14 @@ export default function LoginScreen() {
 
   function navigateByRole(role: UserRole) {
     switch (role) {
-      case 'super_admin':
-      case 'principal':
+      case 'admin':
         router.replace('/admin');
         break;
-      case 'class_teacher':
+      case 'teacher':
         router.replace('/teacher');
         break;
       case 'parent':
         router.replace('/parent');
-        break;
-      case 'bus_driver':
-        router.replace('/driver');
         break;
       case 'accountant':
         router.replace('/accountant');
@@ -128,12 +111,16 @@ export default function LoginScreen() {
     setLoadingSendOtp(true);
     setGeneralError('');
     try {
+      // Use RecaptchaVerifier with size invisible for React Native
+      const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+      });
       const phoneProvider = new PhoneAuthProvider(auth);
       const verificationId = await phoneProvider.verifyPhoneNumber(
         `+91${phone}`,
-        recaptchaVerifierRef.current!
+        recaptchaVerifier
       );
-      confirmationResultRef.current = verificationId;
+      verificationIdRef.current = verificationId;
       setOtpSent(true);
     } catch (error: any) {
       console.error('Send OTP error:', error);
@@ -154,7 +141,7 @@ export default function LoginScreen() {
       return;
     }
 
-    if (!confirmationResultRef.current) {
+    if (!verificationIdRef.current) {
       setGeneralError('Session expired. Please send OTP again.');
       return;
     }
@@ -162,7 +149,7 @@ export default function LoginScreen() {
     setLoadingVerify(true);
     try {
       const credential = PhoneAuthProvider.credential(
-        confirmationResultRef.current,
+        verificationIdRef.current,
         otp
       );
       await signInWithCredential(auth, credential);
@@ -214,9 +201,8 @@ export default function LoginScreen() {
   async function handleEnableBiometric(enable: boolean) {
     await setBiometricEnabled(enable);
     setShowBiometricModal(false);
-    const { getUserSession } = await import('@/lib/storage');
     const session = await getUserSession();
-    if (session.role) {
+    if (session && session.role) {
       navigateByRole(session.role as UserRole);
     }
   }
@@ -224,7 +210,7 @@ export default function LoginScreen() {
   if (!biometricChecked) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={COLORS.accent} />
         <Text style={styles.loadingText}>MyChalkPad</Text>
       </View>
     );
@@ -235,11 +221,8 @@ export default function LoginScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifierRef}
-        firebaseConfig={firebaseConfig}
-        attemptInvisibleVerification={true}
-      />
+      {/* invisible recaptcha container — required by Firebase web SDK */}
+      <View nativeID="recaptcha-container" />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -343,7 +326,7 @@ export default function LoginScreen() {
                   setOtp('');
                   setOtpError('');
                   setGeneralError('');
-                  confirmationResultRef.current = null;
+                  verificationIdRef.current = null;
                 }}
                 activeOpacity={0.7}
               >

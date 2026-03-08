@@ -10,6 +10,7 @@ const KEYS = {
   THEME: 'theme',
   NOTIFICATIONS_ENABLED: 'notifications_enabled',
   LAST_SYNC: 'last_sync',
+  BIOMETRIC_ENABLED: 'biometric_enabled',
 };
 
 export interface UserSession {
@@ -25,12 +26,19 @@ export interface UserSession {
 // ─── User Session ──────────────────────────────────────────────────────────────
 
 export async function saveUserSession(
-  uid: string,
-  schoolId: string,
+  phone: string,
   role: UserRole,
-  extra?: Partial<Omit<UserSession, 'uid' | 'schoolId' | 'role'>>
+  schoolId: string,
+  name?: string,
 ): Promise<void> {
-  const session: UserSession = { uid, schoolId, role, email: null, phone: null, ...extra };
+  const session: UserSession = {
+    uid: phone,
+    phone,
+    email: null,
+    role,
+    schoolId,
+    name: name ?? '',
+  };
   await AsyncStorage.setItem(KEYS.USER_SESSION, JSON.stringify(session));
 }
 
@@ -75,7 +83,7 @@ export async function setTheme(theme: 'light' | 'dark'): Promise<void> {
 
 export async function getTheme(): Promise<'light' | 'dark'> {
   const v = await AsyncStorage.getItem(KEYS.THEME);
-  return (v === 'dark' ? 'dark' : 'light');
+  return v === 'dark' ? 'dark' : 'light';
 }
 
 // ─── Notifications ─────────────────────────────────────────────────────────────
@@ -87,6 +95,17 @@ export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
 export async function getNotificationsEnabled(): Promise<boolean> {
   const v = await AsyncStorage.getItem(KEYS.NOTIFICATIONS_ENABLED);
   return v !== 'false';
+}
+
+// ─── Biometric ─────────────────────────────────────────────────────────────────
+
+export async function setBiometricEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(KEYS.BIOMETRIC_ENABLED, String(enabled));
+}
+
+export async function getBiometricEnabled(): Promise<boolean> {
+  const v = await AsyncStorage.getItem(KEYS.BIOMETRIC_ENABLED);
+  return v === 'true';
 }
 
 // ─── Last Sync ─────────────────────────────────────────────────────────────────

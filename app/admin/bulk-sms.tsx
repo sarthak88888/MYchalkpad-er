@@ -62,6 +62,7 @@ export default function BulkSMSScreen() {
 
   async function initScreen() {
     const session = await getUserSession();
+    if (!session) return;
     setSchoolId(session.schoolId);
   }
 
@@ -242,7 +243,7 @@ export default function BulkSMSScreen() {
                 onPress={() => setChannel(ch)}
               >
                 <MaterialCommunityIcons
-                  name={ch === 'whatsapp' ? 'whatsapp' : ch === 'sms' ? 'message-text' : 'message-fast'}
+                  name={ch === 'whatsapp' ? 'whatsapp' : ch === 'sms' ? 'message-text' : 'message-flash'}
                   size={16}
                   color={channel === ch ? '#FFFFFF' : COLORS.textSecondary}
                 />
