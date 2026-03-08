@@ -116,7 +116,11 @@
       "expo-updates",
       "expo-secure-store",
       "expo-font",
-      "@sentry/react-native"
+      ["@sentry/react-native", {
+  "organization": "dummy",
+  "project": "dummy",
+  "uploadSourceMaps": false
+}]
     ],
     "scheme": "mychalkpad",
     "extra": {
