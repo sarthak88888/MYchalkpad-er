@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:573972831065:android:daea3351c9f6e2f5460a48",
+        "mobilesdk_app_id": "1:573972831065:android:0c4967725ffc982c460a48",
         "android_client_info": {
-          "package_name": "com.mychslkpad.app"
+          "package_name": "com.chalkpad.app"
         }
       },
       "oauth_client": [],
