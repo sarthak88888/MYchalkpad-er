@@ -315,31 +315,3 @@ const styles = StyleSheet.create({
   placeholderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   placeholderText: { color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', marginTop: 12 },
 });
-```
-
----
-
-**✅ FILE GROUP 8 COMPLETE**
-
-**All 6 files go in `app/admin/`:**
-```
-app/admin/
-├── transfer-certificates.tsx
-├── dropout-tracking.tsx
-├── inspection-prep.tsx
-├── performance.tsx
-├── bulk-sms.tsx
-└── progress-report.tsx
-```
-
-**Running total — files created so far:**
-```
-Group 1:  11 files (config + scripts + docs)
-Group 2:  10 files (lib/)
-Group 3:   3 files (app/_layout, index, tabs/_layout)
-Group 4:   2 files (admin/_layout, admin/index)
-Group 5:   3 files (admin/students, reports, settings)
-Group 6:   6 files (admin modules part 1)
-Group 7:   6 files (admin modules part 2)
-Group 8:   6 files (admin modules part 3)
-Total:    47 files ✅

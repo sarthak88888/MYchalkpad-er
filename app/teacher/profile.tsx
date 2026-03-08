@@ -249,18 +249,3 @@ const styles = StyleSheet.create({
   logoutBtn: { backgroundColor: COLORS.error, borderRadius: 8, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   logoutBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
 });
-```
-
----
-
-**✅ FILE GROUP 9 COMPLETE**
-
-**All 5 files go in `app/teacher/`:**
-```
-app/teacher/
-├── _layout.tsx
-├── index.tsx        ← Teacher Dashboard
-├── attendance.tsx   ← Mark + Submit + SMS absent
-├── students.tsx     ← View class students + details
-├── timetable.tsx    ← Read-only week grid
-└── profile.tsx      ← Profile + biometric + language

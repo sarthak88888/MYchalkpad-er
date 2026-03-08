@@ -483,16 +483,3 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 });
-```
-
----
-
-**✅ FILE GROUP 5 COMPLETE**
-
-**Folder summary — all 3 files go in `app/admin/`:**
-```
-app/
-└── admin/
-    ├── students.tsx
-    ├── reports.tsx
-    └── settings.tsx

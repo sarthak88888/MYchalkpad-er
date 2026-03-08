@@ -309,21 +309,3 @@ const styles = StyleSheet.create({
   reportTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   reportDesc: { fontSize: 12, color: COLORS.textSecondary, marginTop: 3, lineHeight: 16 },
 });
-```
-
----
-
-**✅ FILE GROUP 11 COMPLETE**
-
-**Files breakdown:**
-```
-app/driver/
-├── _layout.tsx      ← Role-gated tabs (Dashboard, Students)
-├── index.tsx        ← Bus info, route stops, trip status, SOS button
-└── students.tsx     ← Students grouped by class, tap-to-call parent
-
-app/accountant/
-├── _layout.tsx      ← Role-gated tabs (Dashboard, Fees, Reports)
-├── index.tsx        ← Collection rate, 6-month bar chart, recent payments
-├── fees.tsx         ← Full CRUD, mark paid/overdue, search + filter tabs
-└── reports.tsx      ← 6 exportable CSV reports with breakdown charts

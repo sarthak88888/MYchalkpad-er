@@ -326,18 +326,3 @@ const styles = StyleSheet.create({
   deleteButton: { backgroundColor: COLORS.error, borderRadius: 8, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   deleteButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
 });
-```
-
----
-
-**✅ FILE GROUP 6 COMPLETE**
-
-**All 6 files go in `app/admin/`:**
-```
-app/admin/
-├── admissions.tsx
-├── marks.tsx
-├── fees.tsx
-├── report-cards.tsx
-├── timetable.tsx
-└── staff.tsx

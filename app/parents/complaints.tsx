@@ -370,18 +370,3 @@ const styles = StyleSheet.create({
   pendingReplyCard: { backgroundColor: '#FFFBEB', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderColor: COLORS.warning + '30' },
   pendingReplyText: { flex: 1, fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
 });
-```
-
----
-
-**✅ FILE GROUP 10 COMPLETE**
-
-**All 6 files go in `app/parent/`:**
-```
-app/parent/
-├── _layout.tsx
-├── index.tsx        ← Dashboard with child card, stats, recent attendance dots
-├── attendance.tsx   ← Full history, month filter, % with alerts
-├── marks.tsx        ← Exam selector, grade circles, all-exams overview table
-├── fees.tsx         ← Summary, online Razorpay payment, transaction ID
-└── complaints.tsx   ← Submit + track complaints, view school replies

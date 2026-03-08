@@ -116,22 +116,3 @@ export async function sendFeeReminderNotification(
     console.error('Error sending fee reminder notification:', error);
   }
 }
-```
-
----
-
-**✅ FILE GROUP 2 COMPLETE**
-
-**Folder summary — all 10 files go in `lib/`:**
-```
-lib/
-├── firebase.ts
-├── theme.ts
-├── types.ts
-├── storage.ts
-├── fast2sms.ts
-├── whatsapp.ts
-├── razorpay.ts
-├── sentry.ts
-├── i18n.ts
-└── notifications.ts
