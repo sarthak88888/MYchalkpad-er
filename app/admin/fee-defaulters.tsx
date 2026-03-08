@@ -118,7 +118,7 @@ export default function FeeDefaultersScreen() {
               const phones = filtered.map(f => f.parent_phone).filter(Boolean);
               const msg = `MyChalkPad: Dear Parent, your child has pending school fees. Please pay immediately to avoid inconvenience. Contact school for details.`;
               const result = await sendSMS(phones, msg);
-              Alert.alert('Done', `SMS sent to ${result.sent} parents. ${result.failed > 0 ? `${result.failed} failed.` : ''}`);
+              Alert.alert('Done', `SMS sent to ${result.successCount} parents. ${result.failCount > 0 ? `${result.failCount} failed.` : ''}`);
             } catch (e) {
               Alert.alert('Error', 'Failed to send bulk SMS.');
             } finally {
@@ -258,7 +258,7 @@ export default function FeeDefaultersScreen() {
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <>
-              <MaterialCommunityIcons name="message-fast" size={18} color="#FFFFFF" />
+              <MaterialCommunityIcons name="message-flash" size={18} color="#FFFFFF" />
               <Text style={styles.sendAllText}>Send SMS to All {filtered.length} Defaulters</Text>
             </>
           )}

@@ -11,8 +11,7 @@ import {
 import { db } from '@/lib/firebase';
 import { getUserSession } from '@/lib/storage';
 import { COLORS } from '@/lib/theme';
-import { Student, PerformanceRating } from '@/lib/types';
-
+import { Student, StudentPerformanceRating as PerformanceRating } from '@/lib/types';
 const CLASS_OPTIONS = ['6','7','8','9','10','11','12'];
 const SECTION_OPTIONS = ['A','B','C','D'];
 const SUBJECTS = ['English','Hindi','Mathematics','Science','Social Science','Sanskrit','Computer','Physical Education'];
@@ -41,6 +40,7 @@ export default function PerformanceScreen() {
 
   async function initScreen() {
     const session = await getUserSession();
+    if (!session) return;
     setSchoolId(session.schoolId);
   }
 
@@ -52,7 +52,7 @@ export default function PerformanceScreen() {
         where('section', '==', selectedSection)
       ));
       const studs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
-      studs.sort((a, b) => (a.roll_number ?? 0) - (b.roll_number ?? 0));
+      studs.sort((a, b) => ((a as any).roll_number ?? 0) - ((b as any).roll_number ?? 0));
       setStudents(studs);
       setSelectedStudent(null);
       setRatings(SUBJECTS.map(s => ({ subject: s, rating: 0, remarks: '', trend: 'stable' })));
@@ -68,8 +68,8 @@ export default function PerformanceScreen() {
         where('student_id', '==', selectedStudent.id),
         where('academic_year', '==', '2025-2026')
       ));
-      const existing = snap.docs.map(d => ({ id: d.id, ...d.data() } as PerformanceRating & { id: string });
-      const updatedRatings = SUBJECTS.map(subject => {
+      const existing = snap.docs.map(d => ({ id: d.id, ...d.data() } as PerformanceRating & { id: string }));
+      const updatedRatings: SubjectRating[] = SUBJECTS.map(subject => {
         const found = existing.find(e => e.subject === subject);
         return {
           subject,
@@ -85,7 +85,7 @@ export default function PerformanceScreen() {
   }
 
   function updateRating(subject: string, field: 'rating' | 'remarks' | 'trend', value: any) {
-    setRatings(prev => prev.map(r => r.subject === subject ? { ...r, [field]: value } : r));
+    setRatings((prev: SubjectRating[]) => prev.map((r: SubjectRating) => r.subject === subject ? { ...r, [field]: value } : r));
   }
 
   async function handleSave() {
@@ -178,7 +178,7 @@ export default function PerformanceScreen() {
             <Text style={styles.selectorLabel}>STUDENT</Text>
             <TouchableOpacity style={styles.studentSelector} onPress={() => setShowStudentPicker(!showStudentPicker)}>
               <Text style={selectedStudent ? styles.studentSelectorText : styles.studentSelectorPlaceholder}>
-                {selectedStudent ? `${selectedStudent.name} (Roll ${selectedStudent.roll_number})` : 'Select a student...'}
+                {selectedStudent ? `${selectedStudent.name} (Roll ${(selectedStudent as any).roll_number})` : 'Select a student...'}
               </Text>
               <MaterialCommunityIcons name={showStudentPicker ? 'chevron-up' : 'chevron-down'} size={20} color={COLORS.textSecondary} />
             </TouchableOpacity>
@@ -186,7 +186,7 @@ export default function PerformanceScreen() {
               <View style={styles.studentDropdown}>
                 {students.map(s => (
                   <TouchableOpacity key={s.id} style={styles.studentDropdownItem} onPress={() => { setSelectedStudent(s); setShowStudentPicker(false); }}>
-                    <Text style={styles.studentDropdownText}>{s.roll_number}. {s.name}</Text>
+                    <Text style={styles.studentDropdownText}>{(s as any).roll_number}. {s.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>

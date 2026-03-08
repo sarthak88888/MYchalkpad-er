@@ -40,6 +40,7 @@ export default function InspectionPrepScreen() {
 
   async function initScreen() {
     const session = await getUserSession();
+    if (!session) return;
     setSchoolId(session.schoolId);
     await loadChecklist(session.schoolId);
   }

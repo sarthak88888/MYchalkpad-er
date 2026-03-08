@@ -1,20 +1,18 @@
-import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import Constants from 'expo-constants';
+import * as Notifications from 'expo-notifications';
 
 export async function registerForPushNotifications(
   phone: string
 ): Promise<void> {
   try {
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
 
     if (!projectId) {
       console.warn('EAS project ID not configured — skipping FCM registration');
       return;
     }
-
-    const { default: * as Notifications } = await import('expo-notifications');
 
     await Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -68,7 +66,7 @@ export async function sendAbsenceNotification(
       },
     };
 
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+    await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -76,9 +74,6 @@ export async function sendAbsenceNotification(
       },
       body: JSON.stringify(message),
     });
-
-    const result = await response.json();
-    console.log('Push notification result:', result);
   } catch (error) {
     console.error('Error sending push notification:', error);
   }

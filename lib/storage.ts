@@ -1,74 +1,101 @@
+// lib/storage.ts — AsyncStorage helpers for MyChalkPad
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserRole } from './types';
 
 const KEYS = {
-  PHONE: 'user_phone',
-  ROLE: 'user_role',
-  SCHOOL_ID: 'user_school_id',
-  NAME: 'user_name',
-  BIOMETRIC_ENABLED: 'biometric_enabled',
+  USER_SESSION: 'user_session',
+  SCHOOL_ID: 'school_id',
+  LANGUAGE: 'language',
+  THEME: 'theme',
+  NOTIFICATIONS_ENABLED: 'notifications_enabled',
+  LAST_SYNC: 'last_sync',
 };
 
 export interface UserSession {
-  phone: string;
-  role: UserRole | null;
+  uid: string;
+  email: string | null;
+  phone: string | null;
+  role: UserRole;
   schoolId: string;
-  name: string;
+  name?: string;
+  photoUrl?: string;
 }
+
+// ─── User Session ──────────────────────────────────────────────────────────────
 
 export async function saveUserSession(
-  phone: string,
-  role: UserRole,
+  uid: string,
   schoolId: string,
-  name: string
+  role: UserRole,
+  extra?: Partial<Omit<UserSession, 'uid' | 'schoolId' | 'role'>>
 ): Promise<void> {
-  await AsyncStorage.multiSet([
-    [KEYS.PHONE, phone],
-    [KEYS.ROLE, role],
-    [KEYS.SCHOOL_ID, schoolId],
-    [KEYS.NAME, name],
-  ]);
+  const session: UserSession = { uid, schoolId, role, email: null, phone: null, ...extra };
+  await AsyncStorage.setItem(KEYS.USER_SESSION, JSON.stringify(session));
 }
 
-export async function getUserSession(): Promise<UserSession> {
-  const results = await AsyncStorage.multiGet([
-    KEYS.PHONE,
-    KEYS.ROLE,
-    KEYS.SCHOOL_ID,
-    KEYS.NAME,
-  ]);
-
-  const phone = results[0][1] ?? '';
-  const role = (results[1][1] as UserRole) ?? null;
-  const schoolId = results[2][1] ?? 'school_001';
-  const name = results[3][1] ?? '';
-
-  return { phone, role, schoolId, name };
+export async function getUserSession(): Promise<UserSession | null> {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.USER_SESSION);
+    return raw ? (JSON.parse(raw) as UserSession) : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function clearUserSession(): Promise<void> {
-  await AsyncStorage.multiRemove([
-    KEYS.PHONE,
-    KEYS.ROLE,
-    KEYS.SCHOOL_ID,
-    KEYS.NAME,
-  ]);
+  await AsyncStorage.multiRemove([KEYS.USER_SESSION, KEYS.SCHOOL_ID]);
 }
 
-export async function setBiometricEnabled(enabled: boolean): Promise<void> {
-  await AsyncStorage.setItem(KEYS.BIOMETRIC_ENABLED, enabled ? 'true' : 'false');
+// ─── School ID ─────────────────────────────────────────────────────────────────
+
+export async function saveSchoolId(schoolId: string): Promise<void> {
+  await AsyncStorage.setItem(KEYS.SCHOOL_ID, schoolId);
 }
 
-export async function getBiometricEnabled(): Promise<boolean> {
-  const value = await AsyncStorage.getItem(KEYS.BIOMETRIC_ENABLED);
-  return value === 'true';
+export async function getSchoolId(): Promise<string | null> {
+  return AsyncStorage.getItem(KEYS.SCHOOL_ID);
 }
 
-export async function setLanguagePreference(lang: 'en' | 'hi'): Promise<void> {
-  await AsyncStorage.setItem('language_preference', lang);
+// ─── Language ──────────────────────────────────────────────────────────────────
+
+export async function setLanguage(lang: string): Promise<void> {
+  await AsyncStorage.setItem(KEYS.LANGUAGE, lang);
 }
 
-export async function getLanguagePreference(): Promise<'en' | 'hi'> {
-  const value = await AsyncStorage.getItem('language_preference');
-  return (value as 'en' | 'hi') ?? 'en';
+export async function getLanguage(): Promise<string> {
+  return (await AsyncStorage.getItem(KEYS.LANGUAGE)) ?? 'en';
+}
+
+// ─── Theme ─────────────────────────────────────────────────────────────────────
+
+export async function setTheme(theme: 'light' | 'dark'): Promise<void> {
+  await AsyncStorage.setItem(KEYS.THEME, theme);
+}
+
+export async function getTheme(): Promise<'light' | 'dark'> {
+  const v = await AsyncStorage.getItem(KEYS.THEME);
+  return (v === 'dark' ? 'dark' : 'light');
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────────
+
+export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(KEYS.NOTIFICATIONS_ENABLED, String(enabled));
+}
+
+export async function getNotificationsEnabled(): Promise<boolean> {
+  const v = await AsyncStorage.getItem(KEYS.NOTIFICATIONS_ENABLED);
+  return v !== 'false';
+}
+
+// ─── Last Sync ─────────────────────────────────────────────────────────────────
+
+export async function setLastSync(timestamp: number): Promise<void> {
+  await AsyncStorage.setItem(KEYS.LAST_SYNC, String(timestamp));
+}
+
+export async function getLastSync(): Promise<number | null> {
+  const v = await AsyncStorage.getItem(KEYS.LAST_SYNC);
+  return v ? Number(v) : null;
 }

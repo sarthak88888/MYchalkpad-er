@@ -57,7 +57,7 @@ const MODULES: ModuleCard[] = [
   { id: '14', title: 'Rankings', icon: 'podium', route: '/admin/rankings', color: '#D97706' },
   { id: '15', title: 'Inspection', icon: 'clipboard-check', route: '/admin/inspection-prep', color: '#059669' },
   { id: '16', title: 'Performance', icon: 'star-circle', route: '/admin/performance', color: '#F97316' },
-  { id: '17', title: 'Bulk SMS', icon: 'message-fast', route: '/admin/bulk-sms', color: '#0284C7' },
+  { id: '17', title: 'Bulk SMS', icon: 'message-flash', route: '/admin/bulk-sms', color: '#0284C7' },
   { id: '18', title: 'Progress Report', icon: 'trending-up', route: '/admin/progress-report', color: '#16A34A' },
 ];
 
@@ -80,8 +80,12 @@ export default function AdminDashboard() {
 
   async function initDashboard() {
     const session = await getUserSession();
+    if (!session) {
+      router.replace('/');
+      return;
+    }
     setSchoolId(session.schoolId);
-    setAdminName(session.name);
+    setAdminName(session.name ?? 'Admin');
     await fetchDashboardData(session.schoolId);
   }
 
@@ -461,5 +465,3 @@ const styles = StyleSheet.create({
     height: 20,
   },
 });
-
-

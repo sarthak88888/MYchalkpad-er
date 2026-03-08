@@ -72,10 +72,8 @@ export default function SchoolSetupScreen() {
       const session = await getUserSession();
       const phone = session.phone;
 
-      // Generate school ID from UDISE code
       const schoolId = `school_${form.udise_code.trim()}`;
 
-      // Create school document
       await setDoc(doc(db, 'schools', schoolId), {
         school_id: schoolId,
         school_name: form.school_name.trim(),
@@ -94,7 +92,6 @@ export default function SchoolSetupScreen() {
         created_by: phone,
       });
 
-      // Create principal staff record
       await addDoc(collection(db, 'schools', schoolId, 'staff'), {
         name: form.principal_name.trim(),
         phone: phone,
@@ -105,7 +102,6 @@ export default function SchoolSetupScreen() {
         school_id: schoolId,
       });
 
-      // Update session with school ID and admin role
       await saveUserSession({
         phone,
         name: form.principal_name.trim(),
@@ -140,7 +136,6 @@ export default function SchoolSetupScreen() {
         <Text style={styles.headerSub}>Step {step} of 2</Text>
       </View>
 
-      {/* Progress Bar */}
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: step === 1 ? '50%' : '100%' }]} />
       </View>
@@ -369,192 +364,3 @@ const styles = StyleSheet.create({
   finishBtn: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.success, borderRadius: 12, paddingVertical: 14 },
   finishBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 });
-
-
-
-### `firestore.rules`
-
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    // ── Helper Functions ────────────────────────────────────────────────────
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function getPhone() {
-      return request.auth.token.phone_number.replace('+91', '');
-    }
-
-    function isStaff(schoolId) {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/schools/$(schoolId)/staff/$(request.auth.uid));
-    }
-
-    function getStaffData(schoolId) {
-      return get(/databases/$(database)/documents/schools/$(schoolId)/staff/$(request.auth.uid)).data;
-    }
-
-    function isPrincipal(schoolId) {
-      return isStaff(schoolId) &&
-        getStaffData(schoolId).role in ['Principal', 'Vice Principal'];
-    }
-
-    function isClassTeacher(schoolId) {
-      return isStaff(schoolId) &&
-        getStaffData(schoolId).role in ['Class Teacher', 'Subject Teacher'];
-    }
-
-    function isAccountant(schoolId) {
-      return isStaff(schoolId) &&
-        getStaffData(schoolId).role == 'Accountant';
-    }
-
-    function isDriver(schoolId) {
-      return isStaff(schoolId) &&
-        getStaffData(schoolId).role == 'Bus Driver';
-    }
-
-    function isParentOf(schoolId) {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/schools/$(schoolId)/students/$(request.auth.uid));
-    }
-
-    // ── Schools ─────────────────────────────────────────────────────────────
-    match /schools/{schoolId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isPrincipal(schoolId);
-      allow delete: if false;
-
-      // ── Students ──────────────────────────────────────────────────────────
-      match /students/{studentId} {
-        allow read: if isPrincipal(schoolId)
-          || isClassTeacher(schoolId)
-          || isAccountant(schoolId)
-          || isDriver(schoolId)
-          || (isSignedIn() && resource.data.parent_phone == getPhone());
-        allow create: if isPrincipal(schoolId);
-        allow update: if isPrincipal(schoolId);
-        allow delete: if isPrincipal(schoolId);
-      }
-
-      // ── Staff ─────────────────────────────────────────────────────────────
-      match /staff/{staffId} {
-        allow read: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow create: if isPrincipal(schoolId);
-        allow update: if isPrincipal(schoolId)
-          || (isStaff(schoolId) && staffId == request.auth.uid);
-        allow delete: if isPrincipal(schoolId);
-      }
-
-      // ── Attendance ────────────────────────────────────────────────────────
-      match /attendance/{recordId} {
-        allow read: if isPrincipal(schoolId)
-          || isClassTeacher(schoolId)
-          || (isSignedIn() && resource.data.parent_phone == getPhone());
-        allow create: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow update: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow delete: if isPrincipal(schoolId);
-      }
-
-      // ── Fees ──────────────────────────────────────────────────────────────
-      match /fees/{feeId} {
-        allow read: if isPrincipal(schoolId)
-          || isAccountant(schoolId)
-          || (isSignedIn() && resource.data.student_id != null);
-        allow create: if isPrincipal(schoolId) || isAccountant(schoolId);
-        allow update: if isPrincipal(schoolId) || isAccountant(schoolId);
-        allow delete: if isPrincipal(schoolId);
-      }
-
-      // ── Marks ─────────────────────────────────────────────────────────────
-      match /marks/{markId} {
-        allow read: if isPrincipal(schoolId)
-          || isClassTeacher(schoolId)
-          || isSignedIn();
-        allow create: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow update: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow delete: if isPrincipal(schoolId);
-      }
-
-      // ── Complaints ────────────────────────────────────────────────────────
-      match /complaints/{complaintId} {
-        allow read: if isPrincipal(schoolId)
-          || (isSignedIn() && resource.data.submitted_by_phone == getPhone());
-        allow create: if isSignedIn();
-        allow update: if isPrincipal(schoolId)
-          || (isSignedIn() && resource.data.submitted_by_phone == getPhone()
-              && request.resource.data.status == resource.data.status);
-        allow delete: if isPrincipal(schoolId);
-      }
-
-      // ── Admissions ────────────────────────────────────────────────────────
-      match /admissions/{admissionId} {
-        allow read: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow create: if isSignedIn();
-        allow update: if isPrincipal(schoolId);
-        allow delete: if isPrincipal(schoolId);
-      }
-
-      // ── Timetables ────────────────────────────────────────────────────────
-      match /timetables/{ttId} {
-        allow read: if isPrincipal(schoolId)
-          || isClassTeacher(schoolId)
-          || isSignedIn();
-        allow write: if isPrincipal(schoolId);
-      }
-
-      // ── PTM Meetings ──────────────────────────────────────────────────────
-      match /ptm_meetings/{ptmId} {
-        allow read: if isSignedIn();
-        allow write: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-      }
-
-      // ── Transfer Certificates ─────────────────────────────────────────────
-      match /transfer_certificates/{tcId} {
-        allow read: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow create: if isPrincipal(schoolId);
-        allow update: if isPrincipal(schoolId);
-        allow delete: if false;
-      }
-
-      // ── Dropouts ──────────────────────────────────────────────────────────
-      match /dropouts/{dropoutId} {
-        allow read: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow create: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow update: if isPrincipal(schoolId);
-        allow delete: if isPrincipal(schoolId);
-      }
-
-      // ── Inspection Checklist ──────────────────────────────────────────────
-      match /inspection/{docId} {
-        allow read: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow write: if isPrincipal(schoolId);
-      }
-
-      // ── Performance Ratings ───────────────────────────────────────────────
-      match /performance_ratings/{ratingId} {
-        allow read: if isPrincipal(schoolId)
-          || isClassTeacher(schoolId)
-          || isSignedIn();
-        allow write: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-      }
-
-      // ── SMS Logs ──────────────────────────────────────────────────────────
-      match /sms_logs/{logId} {
-        allow read: if isPrincipal(schoolId);
-        allow create: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-        allow update: if false;
-        allow delete: if false;
-      }
-
-      // ── Rankings (computed) ───────────────────────────────────────────────
-      match /rankings/{rankId} {
-        allow read: if isSignedIn();
-        allow write: if isPrincipal(schoolId) || isClassTeacher(schoolId);
-      }
-    }
-  }
-}

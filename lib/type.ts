@@ -1,300 +1,303 @@
-export type UserRole =
-  | 'super_admin'
-  | 'principal'
-  | 'class_teacher'
-  | 'parent'
-  | 'bus_driver'
-  | 'accountant';
+// lib/types.ts — Shared TypeScript types for MyChalkPad ERP
 
-export interface UserSession {
-  phone: string;
-  role: UserRole;
-  schoolId: string;
-  name: string;
-}
-
-export interface Student {
-  id: string;
-  name: string;
-  class: string;
-  section: string;
-  roll_number: number;
-  parent_phone: string;
-  parent_name: string;
-  dob: string;
-  address: string;
-  fees_due: number;
-  fees_paid: number;
-  admission_date: string;
-  bus_route_id?: string;
-  photo_url?: string;
-  school_id: string;
-}
-
-export interface Staff {
-  id: string;
-  name: string;
-  role: StaffRole;
-  subject?: string;
-  phone: string;
-  email?: string;
-  salary: number;
-  joining_date: string;
-  address?: string;
-  assigned_class?: string;
-  assigned_section?: string;
-  school_id: string;
-}
-
-export type StaffRole =
-  | 'Principal'
-  | 'Vice Principal'
-  | 'Class Teacher'
-  | 'Subject Teacher'
-  | 'Accountant'
-  | 'Clerk'
-  | 'Peon'
-  | 'Bus Driver';
-
-export interface Admission {
-  id: string;
-  student_name: string;
-  dob: string;
-  class_applying: string;
-  parent_name: string;
-  parent_phone: string;
-  address: string;
-  previous_school?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  applied_date: string;
-  approved_date?: string;
-  assigned_class?: string;
-  assigned_section?: string;
-  assigned_roll?: number;
-  school_id: string;
-}
-
-export interface AttendanceRecord {
-  id: string;
-  student_id: string;
-  student_name: string;
-  class: string;
-  section: string;
-  date: string;
-  status: 'present' | 'absent' | 'late';
-  marked_by: string;
-  marked_at: string;
-  school_id: string;
-}
-
-export interface MarksRecord {
-  id: string;
-  student_id: string;
-  student_name: string;
-  class: string;
-  section: string;
-  subject: string;
-  exam_type: 'UT1' | 'UT2' | 'Half-Yearly' | 'Annual';
-  marks: number;
-  max_marks: number;
-  grade: string;
-  academic_year: string;
-  school_id: string;
-}
-
-export interface Complaint {
-  id: string;
-  submitted_by_phone: string;
-  submitted_by_name: string;
-  subject: string;
-  description: string;
-  status: 'open' | 'in_progress' | 'resolved';
-  admin_reply?: string;
-  created_at: string;
-  updated_at: string;
-  school_id: string;
-}
-
-export interface SMSLog {
-  id: string;
-  recipient_phone: string;
-  recipient_name: string;
-  message: string;
-  language: 'en' | 'hi' | 'pa' | 'kangri' | 'haryanvi';
-  channel: 'sms' | 'whatsapp' | 'both';
-  status: 'sent' | 'failed' | 'pending';
-  sent_at: string;
-  cost?: number;
-  school_id: string;
-}
-
-export interface Bus {
-  id: string;
-  bus_number: string;
-  route_name: string;
-  driver_phone: string;
-  driver_name: string;
-  capacity: number;
-  students_onboard: number;
-  is_active: boolean;
-  current_location?: {
-    latitude: number;
-    longitude: number;
-    updated_at: string;
-  };
-  route_stops: string[];
-  school_id: string;
-}
-
-export interface PTMMeeting {
-  id: string;
-  title: string;
-  class: string;
-  section: string;
-  date: string;
-  time: string;
-  venue: string;
-  description?: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
-  sms_sent: boolean;
-  created_by: string;
-  school_id: string;
-}
-
-export interface FeeRecord {
-  id: string;
-  student_id: string;
-  student_name: string;
-  class: string;
-  section: string;
-  parent_phone: string;
-  amount: number;
-  amount_paid: number;
-  fee_type: string;
-  due_date: string;
-  paid_date?: string;
-  status: 'paid' | 'due' | 'overdue';
-  payment_method?: 'cash' | 'upi' | 'razorpay' | 'bank_transfer';
-  transaction_id?: string;
-  academic_year: string;
-  school_id: string;
-}
-
-export interface TransferCertificate {
-  id: string;
-  tc_number: string;
-  student_id: string;
-  student_name: string;
-  class: string;
-  section: string;
-  dob: string;
-  admission_date: string;
-  leaving_date: string;
-  reason: string;
-  conduct: string;
-  status: 'issued' | 'collected';
-  issued_date: string;
-  collected_date?: string;
-  school_id: string;
-}
-
-export interface DropoutRecord {
-  id: string;
-  student_id: string;
-  student_name: string;
-  class: string;
-  section: string;
-  dropout_date: string;
-  reason:
-    | 'financial'
-    | 'migration'
-    | 'marriage'
-    | 'illness'
-    | 'distance'
-    | 'other';
-  remarks?: string;
-  parent_phone: string;
-  follow_up_done: boolean;
-  school_id: string;
-}
-
-export interface TimetableGrid {
-  id: string;
-  class: string;
-  section: string;
-  academic_year: string;
-  grid: TimetableCell[][];
-  school_id: string;
-}
-
-export interface TimetableCell {
-  day: string;
-  period: number;
-  subject: string;
-  teacher_name: string;
-  teacher_id: string;
-}
-
-export interface RankingRecord {
-  id: string;
-  student_id: string;
-  student_name: string;
-  class: string;
-  section: string;
-  subject: string;
-  exam_type: string;
-  marks: number;
-  max_marks: number;
-  percentage: number;
-  rank: number;
-  grade: string;
-  school_id: string;
-}
-
-export interface InspectionItem {
-  id: string;
-  title: string;
-  is_ready: boolean;
-  last_updated: string;
-  school_id: string;
-}
-
-export interface PerformanceRating {
-  id: string;
-  student_id: string;
-  student_name: string;
-  class: string;
-  section: string;
-  subject: string;
-  rating: number;
-  remarks: string;
-  trend: 'improving' | 'declining' | 'stable';
-  academic_year: string;
-  school_id: string;
-}
+export type UserRole = 'admin' | 'teacher' | 'accountant' | 'parent' | 'student';
 
 export interface School {
   id: string;
   name: string;
-  udise_code: string;
-  principal: string;
-  phone: string;
   address: string;
-  academic_year: string;
-  affiliation_number?: string;
-  board?: string;
+  phone: string;
+  email: string;
+  principalName: string;
+  board: string;
+  udiseCode?: string;
+  logoUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  subscriptionPlan?: 'free' | 'basic' | 'premium';
+  subscriptionExpiry?: Date;
+  razorpayKeyId?: string;
+  smsProvider?: 'fast2sms' | 'msg91' | 'none';
+  smsApiKey?: string;
+  smsSenderId?: string;
+  language?: string;
+  timezone?: string;
+  academicYear?: string;
+  classes?: string[];
+  sections?: string[];
+  subjects?: string[];
 }
 
-export interface UserDocument {
+export interface StaffMember {
+  id: string;
+  schoolId: string;
+  name: string;
+  email: string;
   phone: string;
   role: UserRole;
+  employeeId?: string;
+  designation?: string;
+  department?: string;
+  qualification?: string;
+  joiningDate?: string;
+  salary?: number;
+  address?: string;
+  photoUrl?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Student {
+  id: string;
+  schoolId: string;
   name: string;
-  school_id: string;
-  fcm_token?: string;
-  language_preference?: 'en' | 'hi';
-  notification_sms?: boolean;
-  notification_whatsapp?: boolean;
-  notification_push?: boolean;
-  children?: string[];
-  bus_id?: string;
+  rollNumber: string;
+  class: string;
+  section: string;
+  parentId?: string;
+  parentName?: string;
+  parentPhone?: string;
+  parentEmail?: string;
+  dateOfBirth?: string;
+  gender?: 'male' | 'female' | 'other';
+  address?: string;
+  photoUrl?: string;
+  admissionDate?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  studentName: string;
+  class: string;
+  section: string;
+  date: string;
+  status: 'present' | 'absent' | 'late' | 'holiday';
+  markedBy?: string;
+  createdAt: Date;
+}
+
+export interface FeeRecord {
+  id: string;
+  schoolId: string;
+  student_name: string;
+  student_id: string;
+  class: string;
+  section: string;
+  fee_type: string;
+  amount: number;
+  amount_paid?: number;
+  due_date: string;
+  paid_date?: string;
+  status: 'paid' | 'pending' | 'due' | 'overdue';
+  payment_method?: 'cash' | 'online' | 'cheque' | 'dd' | 'razorpay';
+  transaction_id?: string;
+  parent_phone?: string;
+  academic_year?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+export interface MarksRecord {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  studentName: string;
+  class: string;
+  section: string;
+  subject: string;
+  examType: string;
+  maxMarks: number;
+  obtainedMarks: number;
+  grade?: string;
+  remarks?: string;
+  enteredBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Complaint {
+  id: string;
+  schoolId: string;
+  studentId?: string;
+  parentId?: string;
+  submittedBy: string;
+  submitterRole: UserRole;
+  subject: string;
+  description: string;
+  category?: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  priority?: 'low' | 'medium' | 'high';
+  assignedTo?: string;
+  resolution?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AdmissionRecord {
+  id: string;
+  schoolId: string;
+  studentName: string;
+  parentName: string;
+  parentPhone: string;
+  parentEmail?: string;
+  class: string;
+  section?: string;
+  dateOfBirth?: string;
+  gender?: 'male' | 'female' | 'other';
+  previousSchool?: string;
+  status: 'applied' | 'under_review' | 'approved' | 'rejected' | 'enrolled';
+  remarks?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Timetable {
+  id: string;
+  schoolId: string;
+  class: string;
+  section: string;
+  day: string;
+  period: number;
+  subject: string;
+  teacherId?: string;
+  teacherName?: string;
+  startTime: string;
+  endTime: string;
+  room?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PTMMeeting {
+  id: string;
+  schoolId: string;
+  class: string;
+  section?: string;
+  title: string;
+  description?: string;
+  scheduledDate: string;
+  scheduledTime?: string;
+  venue?: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  createdBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TransferCertificate {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  studentName: string;
+  class: string;
+  section?: string;
+  tcNumber?: string;
+  issueDate: string;
+  reason?: string;
+  remarks?: string;
+  status: 'issued' | 'pending';
+  issuedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DropoutRecord {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  studentName: string;
+  class: string;
+  section?: string;
+  dropoutDate: string;
+  reason: string;
+  remarks?: string;
+  followUpStatus?: 'pending' | 'contacted' | 'resolved';
+  reportedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InspectionRecord {
+  id: string;
+  schoolId: string;
+  inspectorName: string;
+  inspectorDesignation?: string;
+  inspectionDate: string;
+  inspectionType?: string;
+  findings?: string;
+  recommendations?: string;
+  rating?: number;
+  followUpDate?: string;
+  status: 'scheduled' | 'completed' | 'pending_report';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PerformanceRating {
+  id: string;
+  schoolId: string;
+  staffId: string;
+  staffName: string;
+  ratedBy: string;
+  ratingPeriod: string;
+  overallRating: number;
+  teachingQuality?: number;
+  punctuality?: number;
+  studentEngagement?: number;
+  administration?: number;
+  remarks?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SmsLog {
+  id: string;
+  schoolId: string;
+  recipient: string;
+  recipientName?: string;
+  message: string;
+  messageType?: string;
+  status: 'sent' | 'failed' | 'pending';
+  provider?: string;
+  requestId?: string;
+  sentAt: Date;
+  createdAt: Date;
+}
+
+export interface RankingRecord {
+  id: string;
+  schoolId: string;
+  class: string;
+  section?: string;
+  examType: string;
+  studentId: string;
+  studentName: string;
+  totalMarks: number;
+  obtainedMarks: number;
+  percentage: number;
+  rank: number;
+  grade?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SMSResult {
+  success: boolean;
+  message: string;
+  request_id?: string;
+  successCount?: number;
+  failCount?: number;
+}
+
+export interface NotificationData {
+  title: string;
+  body: string;
+  data?: Record<string, string>;
 }

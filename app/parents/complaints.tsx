@@ -173,7 +173,7 @@ export default function ParentComplaintsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="message-check" size={48} color={COLORS.textSecondary} />
+              <MaterialCommunityIcons name="message-check-outline" size={48} color={COLORS.textSecondary} />
               <Text style={styles.emptyText}>No complaints submitted</Text>
               <Text style={styles.emptySubText}>Tap + to raise a concern with the school</Text>
             </View>

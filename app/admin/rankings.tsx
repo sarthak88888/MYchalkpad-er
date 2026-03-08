@@ -272,7 +272,7 @@ export default function RankingsScreen() {
 
             {generated && rankings.length === 0 && (
               <View style={styles.emptyContainer}>
-                <MaterialCommunityIcons name="podium-remove" size={48} color={COLORS.textSecondary} />
+                <MaterialCommunityIcons name="podium-off" size={48} color={COLORS.textSecondary} />
                 <Text style={styles.emptyText}>No marks data found for selected filters</Text>
               </View>
             )}

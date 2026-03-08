@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
-  collection, getDocs, addDoc, updateDoc, doc,
+  collection, getDocs, updateDoc, doc,
   query, orderBy,
 } from 'firebase/firestore';
 import QRCode from 'react-native-qrcode-svg';
@@ -34,6 +34,7 @@ export default function FeesScreen() {
 
   async function initScreen() {
     const session = await getUserSession();
+    if (!session) return;
     setSchoolId(session.schoolId);
     await fetchFees(session.schoolId);
   }
@@ -58,13 +59,13 @@ export default function FeesScreen() {
   }
 
   function getSummary() {
-    const collected = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + (f.amount_paid ?? 0), 0);
+    const collected = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + ((f as any).amount_paid ?? 0), 0);
     const pending = fees.filter(f => f.status !== 'paid').reduce((sum, f) => sum + (f.amount ?? 0), 0);
     return { collected, pending };
   }
 
   async function handleMarkPaid(fee: FeeRecord) {
-    Alert.alert('Mark as Paid', `Mark ₹${fee.amount} fee for ${fee.student_name} as paid (Cash)?`, [
+    Alert.alert('Mark as Paid', `Mark ₹${fee.amount} fee for ${(fee as any).student_name} as paid (Cash)?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Mark Paid',
@@ -91,9 +92,9 @@ export default function FeesScreen() {
     try {
       const result = await initiatePayment(
         fee.amount,
-        fee.student_name,
-        fee.parent_phone,
-        `Fee payment for ${fee.student_name} - ${fee.fee_type}`
+        (fee as any).student_name,
+        (fee as any).parent_phone,
+        `Fee payment for ${(fee as any).student_name} - ${(fee as any).fee_type}`
       );
       if (result.success) {
         await updateDoc(doc(db, 'schools', schoolId, 'fees', fee.id), {
@@ -141,9 +142,9 @@ export default function FeesScreen() {
       >
         <View style={styles.cardTop}>
           <View style={styles.cardLeft}>
-            <Text style={styles.cardName}>{item.student_name}</Text>
-            <Text style={styles.cardMeta}>Class {item.class}-{item.section} • {item.fee_type}</Text>
-            <Text style={styles.cardDate}>Due: {item.due_date}</Text>
+            <Text style={styles.cardName}>{(item as any).student_name}</Text>
+            <Text style={styles.cardMeta}>Class {item.class}-{item.section} • {(item as any).fee_type}</Text>
+            <Text style={styles.cardDate}>Due: {(item as any).due_date}</Text>
           </View>
           <View style={styles.cardRight}>
             <Text style={styles.cardAmount}>₹{item.amount}</Text>
@@ -159,7 +160,7 @@ export default function FeesScreen() {
   }
 
   const upiLink = selectedFee
-    ? `upi://pay?pa=school@upi&pn=MyChalkPad&am=${selectedFee.amount}&cu=INR&tn=Fee-${selectedFee.student_name}`
+    ? `upi://pay?pa=school@upi&pn=MyChalkPad&am=${selectedFee.amount}&cu=INR&tn=Fee-${(selectedFee as any).student_name}`
     : '';
 
   return (
@@ -207,7 +208,7 @@ export default function FeesScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="cash-off" size={48} color={COLORS.textSecondary} />
+              <MaterialCommunityIcons name="cash-remove" size={48} color={COLORS.textSecondary} />
               <Text style={styles.emptyText}>No fee records found</Text>
             </View>
           }
@@ -227,7 +228,7 @@ export default function FeesScreen() {
             <ScrollView contentContainerStyle={{ padding: 16 }}>
               {/* Info Card */}
               <View style={styles.detailCard}>
-                <Text style={styles.detailName}>{selectedFee.student_name}</Text>
+                <Text style={styles.detailName}>{(selectedFee as any).student_name}</Text>
                 <Text style={styles.detailMeta}>Class {selectedFee.class}-{selectedFee.section}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedFee.status) + '18', alignSelf: 'flex-start', marginTop: 8 }]}>
                   <Text style={[styles.statusText, { color: getStatusColor(selectedFee.status) }]}>
@@ -237,14 +238,14 @@ export default function FeesScreen() {
               </View>
 
               {[
-                { label: 'Fee Type', value: selectedFee.fee_type },
+                { label: 'Fee Type', value: (selectedFee as any).fee_type },
                 { label: 'Amount', value: `₹${selectedFee.amount}` },
-                { label: 'Due Date', value: selectedFee.due_date },
-                { label: 'Academic Year', value: selectedFee.academic_year },
-                { label: 'Parent Phone', value: selectedFee.parent_phone },
-                ...(selectedFee.paid_date ? [{ label: 'Paid Date', value: selectedFee.paid_date }] : []),
-                ...(selectedFee.payment_method ? [{ label: 'Payment Method', value: selectedFee.payment_method }] : []),
-                ...(selectedFee.transaction_id ? [{ label: 'Transaction ID', value: selectedFee.transaction_id }] : []),
+                { label: 'Due Date', value: (selectedFee as any).due_date },
+                { label: 'Academic Year', value: (selectedFee as any).academic_year },
+                { label: 'Parent Phone', value: (selectedFee as any).parent_phone },
+                ...((selectedFee as any).paid_date ? [{ label: 'Paid Date', value: (selectedFee as any).paid_date }] : []),
+                ...((selectedFee as any).payment_method ? [{ label: 'Payment Method', value: (selectedFee as any).payment_method }] : []),
+                ...((selectedFee as any).transaction_id ? [{ label: 'Transaction ID', value: (selectedFee as any).transaction_id }] : []),
               ].map((row, i) => (
                 <View key={i} style={styles.infoRow}>
                   <Text style={styles.infoLabel}>{row.label}</Text>
@@ -306,7 +307,7 @@ export default function FeesScreen() {
             {selectedFee && (
               <>
                 <Text style={styles.qrModalAmount}>₹{selectedFee.amount}</Text>
-                <Text style={styles.qrModalName}>{selectedFee.student_name}</Text>
+                <Text style={styles.qrModalName}>{(selectedFee as any).student_name}</Text>
                 <View style={styles.qrContainer}>
                   <QRCode value={upiLink} size={200} color={COLORS.primary} />
                 </View>
