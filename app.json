@@ -115,13 +115,8 @@
       ],
       "expo-updates",
       "expo-secure-store",
-      "expo-font",
-      ["@sentry/react-native", {
-  "organization": "dummy",
-  "project": "dummy",
-  "uploadSourceMaps": false
-}]
-    ],
+      "expo-font" 
+      ],
     "scheme": "mychalkpad",
     "extra": {
       "router": {

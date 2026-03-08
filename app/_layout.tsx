@@ -1,11 +1,9 @@
 import { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { onAuthStateChanged } from '@/lib/firebase';
-import { getUserSession, saveUserSession } from '@/lib/storage';
-import { initSentry, setUserContext } from '@/lib/sentry';
+import { saveUserSession } from '@/lib/storage';
 import { loadLanguage } from '@/lib/i18n';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { db } from '@/lib/firebase';
@@ -25,7 +23,6 @@ const paperTheme = {
 
 export default function RootLayout() {
   useEffect(() => {
-    initSentry();
     loadLanguage();
   }, []);
 
@@ -53,22 +50,17 @@ export default function RootLayout() {
         const name = userData.name ?? '';
 
         await saveUserSession(phone, role, schoolId, name);
-        setUserContext(phone, role);
         registerForPushNotifications(phone);
 
         switch (role) {
-          case 'super_admin':
-          case 'principal':
+          case 'admin':
             router.replace('/admin');
             break;
-          case 'class_teacher':
+          case 'teacher':
             router.replace('/teacher');
             break;
           case 'parent':
             router.replace('/parent');
-            break;
-          case 'bus_driver':
-            router.replace('/driver');
             break;
           case 'accountant':
             router.replace('/accountant');
@@ -93,9 +85,7 @@ export default function RootLayout() {
           <Stack.Screen name="admin" />
           <Stack.Screen name="teacher" />
           <Stack.Screen name="parent" />
-          <Stack.Screen name="driver" />
           <Stack.Screen name="accountant" />
-          <Stack.Screen name="(tabs)" />
         </Stack>
       </PaperProvider>
     </SafeAreaProvider>

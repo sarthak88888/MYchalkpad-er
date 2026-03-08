@@ -18,7 +18,6 @@ import { db } from '@/lib/firebase';
 import { signOut } from '@/lib/firebase';
 import { getUserSession, clearUserSession } from '@/lib/storage';
 import { setLanguage } from '@/lib/i18n';
-import { clearUserContext } from '@/lib/sentry';
 import { COLORS } from '@/lib/theme';
 
 export default function SettingsScreen() {
@@ -42,10 +41,11 @@ export default function SettingsScreen() {
 
   async function initSettings() {
     const session = await getUserSession();
+    if (!session) return;
     setSchoolId(session.schoolId);
-    const { getLanguagePreference } = await import('@/lib/storage');
-    const lang = await getLanguagePreference();
-    setCurrentLang(lang);
+    const { getLanguage } = await import('@/lib/storage');
+    const lang = await getLanguage();
+    setCurrentLang(lang === 'hi' ? 'hi' : 'en');
     await fetchSchool(session.schoolId);
   }
 
@@ -117,7 +117,6 @@ export default function SettingsScreen() {
         onPress: async () => {
           await signOut();
           await clearUserSession();
-          clearUserContext();
           router.replace('/');
         },
       },
@@ -140,9 +139,7 @@ export default function SettingsScreen() {
       <View style={styles.root}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Settings</Text>
-          <Text style={styles.headerSubtitle}>
-            Manage school information
-          </Text>
+          <Text style={styles.headerSubtitle}>Manage school information</Text>
         </View>
 
         <ScrollView
@@ -153,11 +150,7 @@ export default function SettingsScreen() {
           {/* School Info Section */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionTitleRow}>
-              <MaterialCommunityIcons
-                name="school"
-                size={20}
-                color={COLORS.primary}
-              />
+              <MaterialCommunityIcons name="school" size={20} color={COLORS.primary} />
               <Text style={styles.sectionTitle}>School Information</Text>
             </View>
 
@@ -169,9 +162,7 @@ export default function SettingsScreen() {
               value={schoolName}
               onChangeText={setSchoolName}
             />
-            {errors.schoolName ? (
-              <Text style={styles.errorText}>{errors.schoolName}</Text>
-            ) : null}
+            {errors.schoolName ? <Text style={styles.errorText}>{errors.schoolName}</Text> : null}
 
             <Text style={styles.label}>UDISE Code *</Text>
             <TextInput
@@ -183,24 +174,17 @@ export default function SettingsScreen() {
               value={udiseCode}
               onChangeText={setUdiseCode}
             />
-            {errors.udiseCode ? (
-              <Text style={styles.errorText}>{errors.udiseCode}</Text>
-            ) : null}
+            {errors.udiseCode ? <Text style={styles.errorText}>{errors.udiseCode}</Text> : null}
 
             <Text style={styles.label}>Academic Year *</Text>
             <TextInput
-              style={[
-                styles.input,
-                errors.academicYear ? styles.inputErr : null,
-              ]}
+              style={[styles.input, errors.academicYear ? styles.inputErr : null]}
               placeholder="e.g. 2025-2026"
               placeholderTextColor={COLORS.textSecondary}
               value={academicYear}
               onChangeText={setAcademicYear}
             />
-            {errors.academicYear ? (
-              <Text style={styles.errorText}>{errors.academicYear}</Text>
-            ) : null}
+            {errors.academicYear ? <Text style={styles.errorText}>{errors.academicYear}</Text> : null}
 
             <Text style={styles.label}>Address</Text>
             <TextInput
@@ -217,11 +201,7 @@ export default function SettingsScreen() {
           {/* Principal Info Section */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionTitleRow}>
-              <MaterialCommunityIcons
-                name="account-tie"
-                size={20}
-                color={COLORS.primary}
-              />
+              <MaterialCommunityIcons name="account-tie" size={20} color={COLORS.primary} />
               <Text style={styles.sectionTitle}>Principal Information</Text>
             </View>
 
@@ -242,9 +222,7 @@ export default function SettingsScreen() {
               keyboardType="number-pad"
               maxLength={10}
               value={principalPhone}
-              onChangeText={(v) =>
-                setPrincipalPhone(v.replace(/\D/g, ''))
-              }
+              onChangeText={(v) => setPrincipalPhone(v.replace(/\D/g, ''))}
             />
           </View>
 
@@ -259,11 +237,7 @@ export default function SettingsScreen() {
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <>
-                <MaterialCommunityIcons
-                  name="content-save"
-                  size={18}
-                  color="#FFFFFF"
-                />
+                <MaterialCommunityIcons name="content-save" size={18} color="#FFFFFF" />
                 <Text style={styles.saveButtonText}>Save Settings</Text>
               </>
             )}
@@ -272,47 +246,25 @@ export default function SettingsScreen() {
           {/* Language Section */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionTitleRow}>
-              <MaterialCommunityIcons
-                name="translate"
-                size={20}
-                color={COLORS.primary}
-              />
+              <MaterialCommunityIcons name="translate" size={20} color={COLORS.primary} />
               <Text style={styles.sectionTitle}>Language / भाषा</Text>
             </View>
-
             <View style={styles.langRow}>
               <TouchableOpacity
-                style={[
-                  styles.langButton,
-                  currentLang === 'en' && styles.langButtonActive,
-                ]}
+                style={[styles.langButton, currentLang === 'en' && styles.langButtonActive]}
                 onPress={() => handleLanguageSwitch('en')}
                 activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.langButtonText,
-                    currentLang === 'en' && styles.langButtonTextActive,
-                  ]}
-                >
+                <Text style={[styles.langButtonText, currentLang === 'en' && styles.langButtonTextActive]}>
                   English
                 </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[
-                  styles.langButton,
-                  currentLang === 'hi' && styles.langButtonActive,
-                ]}
+                style={[styles.langButton, currentLang === 'hi' && styles.langButtonActive]}
                 onPress={() => handleLanguageSwitch('hi')}
                 activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.langButtonText,
-                    currentLang === 'hi' && styles.langButtonTextActive,
-                  ]}
-                >
+                <Text style={[styles.langButtonText, currentLang === 'hi' && styles.langButtonTextActive]}>
                   हिंदी
                 </Text>
               </TouchableOpacity>
@@ -322,14 +274,9 @@ export default function SettingsScreen() {
           {/* App Info Section */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionTitleRow}>
-              <MaterialCommunityIcons
-                name="information"
-                size={20}
-                color={COLORS.primary}
-              />
+              <MaterialCommunityIcons name="information" size={20} color={COLORS.primary} />
               <Text style={styles.sectionTitle}>App Information</Text>
             </View>
-
             {[
               { label: 'App Name', value: 'MyChalkPad' },
               { label: 'Version', value: '1.0.0' },
@@ -362,124 +309,47 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingTop: 52,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-  },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
+  header: { backgroundColor: COLORS.primary, paddingTop: 52, paddingBottom: 20, paddingHorizontal: 16 },
   headerTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: 'bold' },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
-    marginTop: 4,
-  },
+  headerSubtitle: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 4 },
   scrollContent: { padding: 16 },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
+    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 16,
+    elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3,
   },
   sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16,
+    paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    marginBottom: 6,
-    marginTop: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: 12, fontWeight: '600', color: COLORS.textSecondary,
+    marginBottom: 6, marginTop: 12, textTransform: 'uppercase', letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: COLORS.textPrimary,
+    backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.textPrimary,
   },
   inputErr: { borderColor: COLORS.error },
   textArea: { height: 80, textAlignVertical: 'top' },
   errorText: { color: COLORS.error, fontSize: 12, marginTop: 4 },
   saveButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 16,
+    backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 16,
   },
   saveButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
   langRow: { flexDirection: 'row', gap: 12 },
-  langButton: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  langButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  langButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
+  langButton: { flex: 1, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  langButtonActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  langButtonText: { fontSize: 15, fontWeight: '600', color: COLORS.textSecondary },
   langButtonTextActive: { color: '#FFFFFF' },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   infoLabel: { fontSize: 14, color: COLORS.textSecondary },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
+  infoValue: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
   logoutButton: {
-    backgroundColor: COLORS.error,
-    borderRadius: 8,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 8,
+    backgroundColor: COLORS.error, borderRadius: 8, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8,
   },
   logoutText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 });
