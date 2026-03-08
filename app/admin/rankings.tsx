@@ -313,18 +313,3 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyText: { color: COLORS.textSecondary, fontSize: 15, marginTop: 12, textAlign: 'center' },
 });
-```
-
----
-
-**✅ FILE GROUP 7 COMPLETE**
-
-**All 6 files go in `app/admin/`:**
-```
-app/admin/
-├── complaints.tsx
-├── ptm.tsx
-├── sms-dashboard.tsx
-├── udise-export.tsx
-├── fee-defaulters.tsx
-└── rankings.tsx

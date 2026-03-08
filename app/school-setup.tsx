@@ -369,12 +369,11 @@ const styles = StyleSheet.create({
   finishBtn: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.success, borderRadius: 12, paddingVertical: 14 },
   finishBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 });
-```
 
----
+
 
 ### `firestore.rules`
-```
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {

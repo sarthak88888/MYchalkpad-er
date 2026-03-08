@@ -461,15 +461,5 @@ const styles = StyleSheet.create({
     height: 20,
   },
 });
-```
 
----
 
-**✅ FILE GROUP 4 COMPLETE**
-
-**Folder summary:**
-```
-app/
-└── admin/
-    ├── _layout.tsx
-    └── index.tsx
