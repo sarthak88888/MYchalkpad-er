@@ -3,7 +3,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   signOut as firebaseSignOut,
-  onAuthStateChanged,
+  onAuthStateChanged as firebaseOnAuthStateChanged,
   User,
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -35,5 +35,11 @@ export async function signOut(): Promise<void> {
   await firebaseSignOut(auth);
 }
 
-export { onAuthStateChanged };
+// ✅ Wrap onAuthStateChanged so auth is always passed
+export function onAuthStateChanged(
+  callback: (user: User | null) => void
+): () => void {
+  return firebaseOnAuthStateChanged(auth, callback);
+}
+
 export default app;

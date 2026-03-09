@@ -60,7 +60,7 @@ export default function RootLayout() {
             router.replace('/teacher');
             break;
           case 'parent':
-            router.replace('/parent');
+            router.replace('/parents'); // ✅ fixed: folder is 'parents' not 'parent'
             break;
           case 'accountant':
             router.replace('/accountant');
@@ -84,7 +84,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="admin" />
           <Stack.Screen name="teacher" />
-          <Stack.Screen name="parent" />
+          <Stack.Screen name="parents" /> {/* ✅ fixed: was 'parent' */}
           <Stack.Screen name="accountant" />
         </Stack>
       </PaperProvider>
