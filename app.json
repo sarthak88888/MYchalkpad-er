@@ -95,7 +95,6 @@
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "expo-router",
-      
       [
         "expo-location",
         {
@@ -118,15 +117,15 @@
       ],
       "expo-updates",
       "expo-secure-store",
-      "expo-font" 
-      ],
+      "expo-font"
+    ],
     "scheme": "mychalkpad",
     "extra": {
       "router": {
         "origin": false
       },
       "eas": {
-        "projectId": "129ddaa6-f2c4-4747-b897-08c4c46c2e5a"
+        "projectId": "b9769c20-38a1-457a-9485-053b81eeca24"
       },
       "firebaseApiKey": "AIzaSyBPkCc1b0mDOGM8uoTtjtvItaQdqYLR8Qo",
       "firebaseAuthDomain": "mychalkpad-erp.firebaseapp.com",
@@ -142,6 +141,7 @@
     "updates": {
       "fallbackToCacheTimeout": 0,
       "url": "https://u.expo.dev/129ddaa6-f2c4-4747-b897-08c4c46c2e5a"
-    }
+    },
+    "owner": "chalkpad"
   }
 }
