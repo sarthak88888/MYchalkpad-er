@@ -1,3 +1,21 @@
+/**
+ * app/index.tsx — Login Screen
+ *
+ * Uses @react-native-firebase/auth for phone OTP.
+ * This is the correct native approach for React Native production apps.
+ *
+ * SETUP REQUIRED (one time):
+ *   npm install @react-native-firebase/app @react-native-firebase/auth
+ *   npx expo install expo-build-properties
+ *
+ * In app.json plugins add:
+ *   "@react-native-firebase/app",
+ *   "@react-native-firebase/auth"
+ *
+ * Keep lib/firebase.ts using web SDK for Firestore/Storage (that's fine).
+ * Only Auth uses @react-native-firebase/auth.
+ */
+
 import { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -12,14 +30,15 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import {
-  PhoneAuthProvider,
-  signInWithCredential,
-  RecaptchaVerifier,
-} from 'firebase/auth';
+import auth from '@react-native-firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import { saveUserSession, getUserSession, getBiometricEnabled, setBiometricEnabled } from '@/lib/storage';
+import { db } from '@/lib/firebase';
+import {
+  saveUserSession,
+  getBiometricEnabled,
+  setBiometricEnabled,
+  getUserSession,
+} from '@/lib/storage';
 import { COLORS } from '@/lib/theme';
 import { UserRole } from '@/lib/types';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -36,7 +55,7 @@ export default function LoginScreen() {
   const [showBiometricModal, setShowBiometricModal] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
 
-  const verificationIdRef = useRef<string | null>(null);
+  const confirmationRef = useRef<any>(null);
 
   useEffect(() => {
     checkBiometricLogin();
@@ -49,21 +68,17 @@ export default function LoginScreen() {
         setBiometricChecked(true);
         return;
       }
-
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-
       if (!hasHardware || !isEnrolled) {
         setBiometricChecked(true);
         return;
       }
-
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Login to MyChalkPad',
         fallbackLabel: 'Use OTP instead',
         cancelLabel: 'Cancel',
       });
-
       if (result.success) {
         const session = await getUserSession();
         if (session && session.role && session.phone) {
@@ -80,14 +95,18 @@ export default function LoginScreen() {
 
   function navigateByRole(role: UserRole) {
     switch (role) {
-      case 'admin':
+      case 'super_admin':
+      case 'principal':
         router.replace('/admin');
         break;
-      case 'teacher':
+      case 'class_teacher':
         router.replace('/teacher');
         break;
       case 'parent':
         router.replace('/parent');
+        break;
+      case 'bus_driver':
+        router.replace('/driver');
         break;
       case 'accountant':
         router.replace('/accountant');
@@ -111,16 +130,10 @@ export default function LoginScreen() {
     setLoadingSendOtp(true);
     setGeneralError('');
     try {
-      // Use RecaptchaVerifier with size invisible for React Native
-      const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-      });
-      const phoneProvider = new PhoneAuthProvider(auth);
-      const verificationId = await phoneProvider.verifyPhoneNumber(
-        `+91${phone}`,
-        recaptchaVerifier
-      );
-      verificationIdRef.current = verificationId;
+      // @react-native-firebase/auth handles Android SafetyNet/Play Integrity
+      // automatically — no RecaptchaVerifier needed
+      const confirmation = await auth().signInWithPhoneNumber(`+91${phone}`);
+      confirmationRef.current = confirmation;
       setOtpSent(true);
     } catch (error: any) {
       console.error('Send OTP error:', error);
@@ -135,25 +148,19 @@ export default function LoginScreen() {
   async function handleVerifyOtp() {
     setOtpError('');
     setGeneralError('');
-
     if (!otp || otp.length !== 6) {
       setOtpError('Please enter the 6-digit OTP');
       return;
     }
-
-    if (!verificationIdRef.current) {
+    if (!confirmationRef.current) {
       setGeneralError('Session expired. Please send OTP again.');
       return;
     }
-
     setLoadingVerify(true);
     try {
-      const credential = PhoneAuthProvider.credential(
-        verificationIdRef.current,
-        otp
-      );
-      await signInWithCredential(auth, credential);
+      await confirmationRef.current.confirm(otp);
 
+      // OTP verified — now look up user in Firestore
       const userRef = doc(db, 'users', phone);
       const userSnap = await getDoc(userRef);
 
@@ -191,7 +198,9 @@ export default function LoginScreen() {
       } else if (error?.code === 'auth/code-expired') {
         setOtpError('OTP expired. Please request a new one.');
       } else {
-        setGeneralError(error?.message ?? 'Verification failed. Please try again.');
+        setGeneralError(
+          error?.message ?? 'Verification failed. Please try again.'
+        );
       }
     } finally {
       setLoadingVerify(false);
@@ -221,9 +230,6 @@ export default function LoginScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* invisible recaptcha container — required by Firebase web SDK */}
-      <View nativeID="recaptcha-container" />
-
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -239,7 +245,7 @@ export default function LoginScreen() {
             Enter your registered phone number
           </Text>
 
-          {/* Phone Input Row */}
+          {/* Phone Input */}
           <View style={styles.phoneRow}>
             <View style={styles.prefixBox}>
               <Text style={styles.prefixText}>🇮🇳 +91</Text>
@@ -263,10 +269,13 @@ export default function LoginScreen() {
             <Text style={styles.errorText}>{phoneError}</Text>
           ) : null}
 
-          {/* Send OTP Button */}
+          {/* Send OTP */}
           {!otpSent ? (
             <TouchableOpacity
-              style={[styles.accentButton, loadingSendOtp && styles.buttonDisabled]}
+              style={[
+                styles.accentButton,
+                loadingSendOtp && styles.buttonDisabled,
+              ]}
               onPress={handleSendOtp}
               disabled={loadingSendOtp}
               activeOpacity={0.8}
@@ -279,18 +288,19 @@ export default function LoginScreen() {
             </TouchableOpacity>
           ) : null}
 
-          {/* OTP Sent Message */}
+          {/* OTP Sent Confirmation */}
           {otpSent ? (
-            <Text style={styles.otpSentText}>
-              OTP sent to +91 {phone}
-            </Text>
+            <Text style={styles.otpSentText}>OTP sent to +91 {phone}</Text>
           ) : null}
 
           {/* OTP Input */}
           {otpSent ? (
             <>
               <TextInput
-                style={[styles.otpInput, otpError ? styles.inputError : null]}
+                style={[
+                  styles.otpInput,
+                  otpError ? styles.inputError : null,
+                ]}
                 placeholder="Enter 6-digit OTP"
                 placeholderTextColor={COLORS.textSecondary}
                 keyboardType="number-pad"
@@ -307,7 +317,10 @@ export default function LoginScreen() {
               ) : null}
 
               <TouchableOpacity
-                style={[styles.primaryButton, loadingVerify && styles.buttonDisabled]}
+                style={[
+                  styles.primaryButton,
+                  loadingVerify && styles.buttonDisabled,
+                ]}
                 onPress={handleVerifyOtp}
                 disabled={loadingVerify}
                 activeOpacity={0.8}
@@ -326,7 +339,7 @@ export default function LoginScreen() {
                   setOtp('');
                   setOtpError('');
                   setGeneralError('');
-                  verificationIdRef.current = null;
+                  confirmationRef.current = null;
                 }}
                 activeOpacity={0.7}
               >
@@ -385,10 +398,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-  },
+  root: { flex: 1, backgroundColor: COLORS.primary },
   loadingContainer: {
     flex: 1,
     backgroundColor: COLORS.primary,
@@ -406,10 +416,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  topSection: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
+  topSection: { alignItems: 'center', marginBottom: 32 },
   appName: {
     color: '#FFFFFF',
     fontSize: 36,
@@ -443,11 +450,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: 24,
   },
-  phoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
+  phoneRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   prefixBox: {
     backgroundColor: COLORS.background,
     borderWidth: 1,
@@ -457,11 +460,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginRight: 8,
   },
-  prefixText: {
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    fontWeight: '500',
-  },
+  prefixText: { fontSize: 16, color: COLORS.textPrimary, fontWeight: '500' },
   phoneInput: {
     flex: 1,
     borderWidth: 1,
@@ -487,9 +486,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 4,
   },
-  inputError: {
-    borderColor: COLORS.error,
-  },
+  inputError: { borderColor: COLORS.error },
   errorText: {
     color: COLORS.error,
     fontSize: 12,
@@ -504,10 +501,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 12,
   },
-  errorBoxText: {
-    color: COLORS.error,
-    fontSize: 14,
-  },
+  errorBoxText: { color: COLORS.error, fontSize: 14 },
   otpSentText: {
     color: COLORS.success,
     fontSize: 13,
@@ -529,24 +523,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  resendButton: {
-    alignItems: 'center',
-    marginTop: 12,
-    paddingVertical: 8,
-  },
-  resendText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  resendButton: { alignItems: 'center', marginTop: 12, paddingVertical: 8 },
+  resendText: { color: COLORS.primary, fontSize: 14, fontWeight: '600' },
   outlineButton: {
     borderWidth: 1.5,
     borderColor: COLORS.primary,
@@ -581,10 +561,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
   },
   modalTitle: {
     fontSize: 20,
