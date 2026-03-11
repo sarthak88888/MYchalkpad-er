@@ -301,7 +301,7 @@ async function notifyUsersViaSMS(
         : `Dear ${role.charAt(0).toUpperCase() + role.slice(1)}, you are registered on MyChalkPad for ${schoolName}. Login with your mobile number. App: mychalkpad.com`;
 
     // Fast2SMS sendBulkSMS accepts array of phone strings + message
-    await sendBulkSMS(phones, message);
+    await sendBulkSMS(phones, message, 'en');
   } catch (err) {
     // SMS failure must NOT block the import
     console.error('[csvImport] SMS notification failed (import was still successful):', err);
