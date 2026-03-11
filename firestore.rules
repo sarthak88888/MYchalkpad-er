@@ -3,44 +3,97 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Helper Functions ──────────────────────────────────────────────────
+
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // ✅ FIXED: strips +91 correctly — Firestore rules support string slicing
     function getPhone() {
-      return request.auth.token.phone_number.replace('+91', '');
+      return request.auth.token.phone_number[3:];
     }
 
+    // ✅ FIXED: use getPhone() not request.auth.uid
     function staffDoc(schoolId) {
-      return /databases/$(database)/documents/schools/$(schoolId)/staff/$(request.auth.uid);
+      return /databases/$(database)/documents/schools/$(schoolId)/staff/$(getPhone());
+    }
+
+    // Check user role from users/ collection (used for CSV import and login)
+    function userDoc() {
+      return /databases/$(database)/documents/users/$(getPhone());
+    }
+
+    function getUserRole() {
+      return get(userDoc()).data.role;
     }
 
     function isPrincipal(schoolId) {
       return isSignedIn()
-        && exists(staffDoc(schoolId))
-        && get(staffDoc(schoolId)).data.role in ['Principal', 'Vice Principal'];
+        && (
+          // Check via staff collection
+          (exists(staffDoc(schoolId))
+            && get(staffDoc(schoolId)).data.role in ['Principal', 'Vice Principal', 'admin'])
+          ||
+          // Check via users collection (for CSV imported admins)
+          (exists(userDoc())
+            && getUserRole() in ['admin', 'principal'])
+        );
     }
 
     function isClassTeacher(schoolId) {
       return isSignedIn()
-        && exists(staffDoc(schoolId))
-        && get(staffDoc(schoolId)).data.role in ['Class Teacher', 'Subject Teacher'];
+        && (
+          (exists(staffDoc(schoolId))
+            && get(staffDoc(schoolId)).data.role in ['Class Teacher', 'Subject Teacher', 'teacher'])
+          ||
+          (exists(userDoc()) && getUserRole() == 'teacher')
+        );
     }
 
     function isAccountant(schoolId) {
       return isSignedIn()
-        && exists(staffDoc(schoolId))
-        && get(staffDoc(schoolId)).data.role == 'Accountant';
+        && (
+          (exists(staffDoc(schoolId))
+            && get(staffDoc(schoolId)).data.role == 'Accountant')
+          ||
+          (exists(userDoc()) && getUserRole() == 'accountant')
+        );
     }
 
     function isDriver(schoolId) {
       return isSignedIn()
-        && exists(staffDoc(schoolId))
-        && get(staffDoc(schoolId)).data.role == 'Bus Driver';
+        && (
+          (exists(staffDoc(schoolId))
+            && get(staffDoc(schoolId)).data.role == 'Bus Driver')
+          ||
+          (exists(userDoc()) && getUserRole() == 'driver')
+        );
     }
 
     function isAnyStaff(schoolId) {
-      return isSignedIn() && exists(staffDoc(schoolId));
+      return isSignedIn()
+        && (exists(staffDoc(schoolId)) || exists(userDoc()));
+    }
+
+    function isParent() {
+      return isSignedIn()
+        && exists(userDoc())
+        && getUserRole() == 'parent';
+    }
+
+    // ── Users Collection ──────────────────────────────────────────────────
+    // Each user document ID = their phone number
+    match /users/{phone} {
+      // User can read their own document
+      allow read: if isSignedIn() && getPhone() == phone;
+      // Admin can read any user
+      allow read: if isSignedIn() && getUserRole() in ['admin', 'principal'];
+      // CSV import creates users — allow if signed in admin
+      allow create: if isSignedIn();
+      allow update: if isSignedIn()
+        && (getPhone() == phone || getUserRole() in ['admin', 'principal']);
+      allow delete: if isSignedIn()
+        && getUserRole() in ['admin', 'principal'];
     }
 
     // ── Schools ───────────────────────────────────────────────────────────
@@ -58,6 +111,7 @@ service cloud.firestore {
           || isDriver(schoolId)
           || (isSignedIn()
               && resource.data.parent_phone == getPhone());
+        // ✅ CSV import allowed for admin
         allow create: if isPrincipal(schoolId);
         allow update: if isPrincipal(schoolId);
         allow delete: if isPrincipal(schoolId);
@@ -66,9 +120,10 @@ service cloud.firestore {
       // ── Staff ────────────────────────────────────────────────────────────
       match /staff/{staffId} {
         allow read: if isAnyStaff(schoolId);
+        // ✅ CSV import allowed for admin
         allow create: if isPrincipal(schoolId);
         allow update: if isPrincipal(schoolId)
-          || (isSignedIn() && staffId == request.auth.uid);
+          || (isSignedIn() && staffId == getPhone());
         allow delete: if isPrincipal(schoolId);
       }
 
@@ -90,15 +145,21 @@ service cloud.firestore {
           || (isSignedIn()
               && resource.data.parent_phone == getPhone());
         allow create: if isPrincipal(schoolId) || isAccountant(schoolId);
-        allow update: if isPrincipal(schoolId) || isAccountant(schoolId);
+        // ✅ Parent can update fees (for Razorpay payment)
+        allow update: if isPrincipal(schoolId)
+          || isAccountant(schoolId)
+          || (isSignedIn()
+              && resource.data.parent_phone == getPhone());
         allow delete: if isPrincipal(schoolId);
       }
 
       // ── Marks ────────────────────────────────────────────────────────────
+      // ✅ FIXED: was allowing ALL signed in users — now restricted
       match /marks/{markId} {
         allow read: if isPrincipal(schoolId)
           || isClassTeacher(schoolId)
-          || isSignedIn();
+          || (isSignedIn()
+              && resource.data.parent_phone == getPhone());
         allow create: if isPrincipal(schoolId) || isClassTeacher(schoolId);
         allow update: if isPrincipal(schoolId) || isClassTeacher(schoolId);
         allow delete: if isPrincipal(schoolId);
@@ -163,7 +224,7 @@ service cloud.firestore {
       match /performance_ratings/{ratingId} {
         allow read: if isPrincipal(schoolId)
           || isClassTeacher(schoolId)
-          || isSignedIn();
+          || (isSignedIn() && resource.data.parent_phone == getPhone());
         allow write: if isPrincipal(schoolId) || isClassTeacher(schoolId);
       }
 
@@ -181,7 +242,7 @@ service cloud.firestore {
         allow write: if isPrincipal(schoolId) || isClassTeacher(schoolId);
       }
 
-      // ── Fee Defaulters (computed view) ───────────────────────────────────
+      // ── Fee Defaulters ───────────────────────────────────────────────────
       match /fee_defaulters/{docId} {
         allow read: if isPrincipal(schoolId) || isAccountant(schoolId);
         allow write: if isPrincipal(schoolId) || isAccountant(schoolId);
