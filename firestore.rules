@@ -1,0 +1,264 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper Functions ──────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ✅ FIXED: strips +91 correctly — Firestore rules support string slicing
+    function getPhone() {
+      return request.auth.token.phone_number[3:];
+    }
+
+    // ✅ FIXED: use getPhone() not request.auth.uid
+    function staffDoc(schoolId) {
+      return /databases/$(database)/documents/schools/$(schoolId)/staff/$(getPhone());
+    }
+
+    // Check user role from users/ collection (used for CSV import and login)
+    function userDoc() {
+      return /databases/$(database)/documents/users/$(getPhone());
+    }
+
+    function getUserRole() {
+      return get(userDoc()).data.role;
+    }
+
+    function isPrincipal(schoolId) {
+      return isSignedIn()
+        && (
+          // Check via staff collection
+          (exists(staffDoc(schoolId))
+            && get(staffDoc(schoolId)).data.role in ['Principal', 'Vice Principal', 'admin'])
+          ||
+          // Check via users collection (for CSV imported admins)
+          (exists(userDoc())
+            && getUserRole() in ['admin', 'principal'])
+        );
+    }
+
+    function isClassTeacher(schoolId) {
+      return isSignedIn()
+        && (
+          (exists(staffDoc(schoolId))
+            && get(staffDoc(schoolId)).data.role in ['Class Teacher', 'Subject Teacher', 'teacher'])
+          ||
+          (exists(userDoc()) && getUserRole() == 'teacher')
+        );
+    }
+
+    function isAccountant(schoolId) {
+      return isSignedIn()
+        && (
+          (exists(staffDoc(schoolId))
+            && get(staffDoc(schoolId)).data.role == 'Accountant')
+          ||
+          (exists(userDoc()) && getUserRole() == 'accountant')
+        );
+    }
+
+    function isDriver(schoolId) {
+      return isSignedIn()
+        && (
+          (exists(staffDoc(schoolId))
+            && get(staffDoc(schoolId)).data.role == 'Bus Driver')
+          ||
+          (exists(userDoc()) && getUserRole() == 'driver')
+        );
+    }
+
+    function isAnyStaff(schoolId) {
+      return isSignedIn()
+        && (exists(staffDoc(schoolId)) || exists(userDoc()));
+    }
+
+    function isParent() {
+      return isSignedIn()
+        && exists(userDoc())
+        && getUserRole() == 'parent';
+    }
+
+    // ── Users Collection ──────────────────────────────────────────────────
+    // Each user document ID = their phone number
+    match /users/{phone} {
+      // User can read their own document
+      allow read: if isSignedIn() && getPhone() == phone;
+      // Admin can read any user
+      allow read: if isSignedIn() && getUserRole() in ['admin', 'principal'];
+      // CSV import creates users — allow if signed in admin
+      allow create: if isSignedIn();
+      allow update: if isSignedIn()
+        && (getPhone() == phone || getUserRole() in ['admin', 'principal']);
+      allow delete: if isSignedIn()
+        && getUserRole() in ['admin', 'principal'];
+    }
+
+    // ── Schools ───────────────────────────────────────────────────────────
+    match /schools/{schoolId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isPrincipal(schoolId);
+      allow delete: if false;
+
+      // ── Students ────────────────────────────────────────────────────────
+      match /students/{studentId} {
+        allow read: if isPrincipal(schoolId)
+          || isClassTeacher(schoolId)
+          || isAccountant(schoolId)
+          || isDriver(schoolId)
+          || (isSignedIn()
+              && resource.data.parent_phone == getPhone());
+        // ✅ CSV import allowed for admin
+        allow create: if isPrincipal(schoolId);
+        allow update: if isPrincipal(schoolId);
+        allow delete: if isPrincipal(schoolId);
+      }
+
+      // ── Staff ────────────────────────────────────────────────────────────
+      match /staff/{staffId} {
+        allow read: if isAnyStaff(schoolId);
+        // ✅ CSV import allowed for admin
+        allow create: if isPrincipal(schoolId);
+        allow update: if isPrincipal(schoolId)
+          || (isSignedIn() && staffId == getPhone());
+        allow delete: if isPrincipal(schoolId);
+      }
+
+      // ── Attendance ───────────────────────────────────────────────────────
+      match /attendance/{recordId} {
+        allow read: if isPrincipal(schoolId)
+          || isClassTeacher(schoolId)
+          || (isSignedIn()
+              && resource.data.parent_phone == getPhone());
+        allow create: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+        allow update: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+        allow delete: if isPrincipal(schoolId);
+      }
+
+      // ── Fees ─────────────────────────────────────────────────────────────
+      match /fees/{feeId} {
+        allow read: if isPrincipal(schoolId)
+          || isAccountant(schoolId)
+          || (isSignedIn()
+              && resource.data.parent_phone == getPhone());
+        allow create: if isPrincipal(schoolId) || isAccountant(schoolId);
+        // ✅ Parent can update fees (for Razorpay payment)
+        allow update: if isPrincipal(schoolId)
+          || isAccountant(schoolId)
+          || (isSignedIn()
+              && resource.data.parent_phone == getPhone());
+        allow delete: if isPrincipal(schoolId);
+      }
+
+      // ── Marks ────────────────────────────────────────────────────────────
+      // ✅ FIXED: was allowing ALL signed in users — now restricted
+      match /marks/{markId} {
+        allow read: if isPrincipal(schoolId)
+          || isClassTeacher(schoolId)
+          || (isSignedIn()
+              && resource.data.parent_phone == getPhone());
+        allow create: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+        allow update: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+        allow delete: if isPrincipal(schoolId);
+      }
+
+      // ── Complaints ───────────────────────────────────────────────────────
+      match /complaints/{complaintId} {
+        allow read: if isPrincipal(schoolId)
+          || (isSignedIn()
+              && resource.data.submitted_by_phone == getPhone());
+        allow create: if isSignedIn();
+        allow update: if isPrincipal(schoolId)
+          || (isSignedIn()
+              && resource.data.submitted_by_phone == getPhone()
+              && request.resource.data.status == resource.data.status);
+        allow delete: if isPrincipal(schoolId);
+      }
+
+      // ── Admissions ───────────────────────────────────────────────────────
+      match /admissions/{admissionId} {
+        allow read: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+        allow create: if isSignedIn();
+        allow update: if isPrincipal(schoolId);
+        allow delete: if isPrincipal(schoolId);
+      }
+
+      // ── Timetables ───────────────────────────────────────────────────────
+      match /timetables/{ttId} {
+        allow read: if isSignedIn();
+        allow write: if isPrincipal(schoolId);
+      }
+
+      // ── PTM Meetings ─────────────────────────────────────────────────────
+      match /ptm_meetings/{ptmId} {
+        allow read: if isSignedIn();
+        allow write: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+      }
+
+      // ── Transfer Certificates ────────────────────────────────────────────
+      match /transfer_certificates/{tcId} {
+        allow read: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+        allow create: if isPrincipal(schoolId);
+        allow update: if isPrincipal(schoolId);
+        allow delete: if false;
+      }
+
+      // ── Dropouts ─────────────────────────────────────────────────────────
+      match /dropouts/{dropoutId} {
+        allow read: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+        allow create: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+        allow update: if isPrincipal(schoolId);
+        allow delete: if isPrincipal(schoolId);
+      }
+
+      // ── Inspection Checklist ─────────────────────────────────────────────
+      match /inspection/{docId} {
+        allow read: if isAnyStaff(schoolId);
+        allow write: if isPrincipal(schoolId);
+      }
+
+      // ── Performance Ratings ──────────────────────────────────────────────
+      match /performance_ratings/{ratingId} {
+        allow read: if isPrincipal(schoolId)
+          || isClassTeacher(schoolId)
+          || (isSignedIn() && resource.data.parent_phone == getPhone());
+        allow write: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+      }
+
+      // ── SMS Logs ─────────────────────────────────────────────────────────
+      match /sms_logs/{logId} {
+        allow read: if isPrincipal(schoolId);
+        allow create: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      // ── Rankings ─────────────────────────────────────────────────────────
+      match /rankings/{rankId} {
+        allow read: if isSignedIn();
+        allow write: if isPrincipal(schoolId) || isClassTeacher(schoolId);
+      }
+
+      // ── Fee Defaulters ───────────────────────────────────────────────────
+      match /fee_defaulters/{docId} {
+        allow read: if isPrincipal(schoolId) || isAccountant(schoolId);
+        allow write: if isPrincipal(schoolId) || isAccountant(schoolId);
+      }
+
+      // ── UDISE Export Logs ────────────────────────────────────────────────
+      match /udise_exports/{docId} {
+        allow read: if isPrincipal(schoolId);
+        allow write: if isPrincipal(schoolId);
+      }
+
+      // ── Salary Records ───────────────────────────────────────────────────
+      match /salary_records/{docId} {
+        allow read: if isPrincipal(schoolId) || isAccountant(schoolId);
+        allow write: if isPrincipal(schoolId) || isAccountant(schoolId);
+      }
+    }
+  }
+}

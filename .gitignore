@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+build/
+web-build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment & Secrets — NEVER commit
+.env
+.env.local
+.env.production
+.env.development
+
+# Firebase — CRITICAL, contains private keys
+google-services.json
+GoogleService-Info.plist
+
+# EAS
+.eas/
+eas-build-local-nodejs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Android
+android/
+*.keystore
+*.jks
+
+# iOS
+ios/
+*.p8
+*.p12
+*.mobileprovision
+
+# TypeScript
+*.tsbuildinfo

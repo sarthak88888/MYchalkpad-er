@@ -1,0 +1,147 @@
+{
+  "expo": {
+    "name": "MyChalkPad",
+    "slug": "mychalkpad-erp",
+    "version": "1.0.0",
+    "runtimeVersion": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E3A5F"
+    },
+    "android": {
+      "package": "com.mychalkpad.erp",
+      "versionCode": 1,
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
+      "minSdkVersion": 24,
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1E3A5F"
+      },
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.INTERNET",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "mychalkpad.com",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.mychalkpad.erp",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "requireFullScreen": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "MyChalkPad uses your location to track the school bus route in real time so parents can see where the bus is.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "MyChalkPad uses your location to track the school bus route in real time so parents can see where the bus is.",
+        "NSLocationAlwaysUsageDescription": "MyChalkPad uses your location to track the school bus route in real time so parents can see where the bus is.",
+        "NSCameraUsageDescription": "MyChalkPad uses the camera to scan and upload student documents and photos.",
+        "NSFaceIDUsageDescription": "MyChalkPad uses Face ID so school staff can log in quickly and securely without typing a password each time.",
+        "NSMicrophoneUsageDescription": "MyChalkPad does not use the microphone. This permission is not required.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ]
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          }
+        ]
+      }
+    },
+    "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow MyChalkPad to use your location for real-time bus GPS tracking.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      "expo-local-authentication",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildToolsVersion": "34.0.0"
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ],
+      "expo-updates",
+      "expo-secure-store",
+      "expo-font"
+    ],
+    "scheme": "mychalkpad",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "b9769c20-38a1-457a-9485-053b81eeca24"
+      },
+      "firebaseApiKey": "AIzaSyBPkCc1b0mDOGM8uoTtjtvItaQdqYLR8Qo",
+      "firebaseAuthDomain": "mychalkpad-erp.firebaseapp.com",
+      "firebaseProjectId": "mychalkpad-erp",
+      "firebaseStorageBucket": "mychalkpad-erp.firebasestorage.app",
+      "firebaseMessagingSenderId": "573972831065",
+      "firebaseAppId": "1:573972831065:web:b50e3339a9e210d4460a48",
+      "sentryDsn": "https://070f59a444a64901fcb2f21eedc3b730@o4511002038173696.ingest.us.sentry.io/4511002255425536",
+      "razorpayKeyId": "REPLACE_WITH_YOUR_RAZORPAY_KEY",
+      "interaktApiKey": "REPLACE_WITH_YOUR_INTERAKT_KEY",
+      "fast2smsApiKey": "jc3NzlT8uM5tdJDbqW2iaU9R4ZEIYQoxHfe7hyXAnGL1mSgkCOBuj9F475bolveDAfOEiKMhc1w3WzkC"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/129ddaa6-f2c4-4747-b897-08c4c46c2e5a"
+    },
+    "owner": "chalkpad"
+  }
+}
