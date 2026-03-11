@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "573972831065",
+    "project_id": "mychalkpad-erp",
+    "storage_bucket": "mychalkpad-erp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:573972831065:android:1faca0bbfdfbb3f5460a48",
+        "android_client_info": {
+          "package_name": "com.mychalkpad.erp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5WUBMLIJok8ZPdxvSP5QvJHPtBMrDZWc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
