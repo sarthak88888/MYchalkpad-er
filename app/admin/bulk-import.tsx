@@ -28,7 +28,7 @@ import {
 
 // ─── Read school info from your SecureStore / auth context ───────────────────
 // Replace these with however you currently read school info in your app
-import { getValueFor } from '../../lib/storage'; // your existing SecureStore helper
+ import { getUserSession } from '../../lib/storage';// your existing SecureStore helper
 
 // ─── ROLE OPTIONS ─────────────────────────────────────────────────────────────
 
@@ -125,8 +125,9 @@ export default function BulkImportScreen() {
     }
 
     // Get school info from SecureStore
-    const schoolId   = await getValueFor('school_id');
-    const schoolName = await getValueFor('school_name') || 'Your School';
+    const session    = await getUserSession();
+    const schoolId   = session?.schoolId ?? null;
+    const schoolName = session?.name ?? 'Your School';
 
     if (!schoolId) {
       Alert.alert('Error', 'School ID not found. Please log out and log in again.');
