@@ -2,15 +2,14 @@
 // Bulk CSV Import Utility for MyChalkPad ERP
 // Handles: Students, Parents, Staff/Teachers, Admins, Accountants, Drivers
 
-import { db } from './firebase';
+import { db } from '@/lib/firebase';
 import {
   collection,
   doc,
-  setDoc,
   writeBatch,
   serverTimestamp,
 } from 'firebase/firestore';
-import { sendBulkSMS } from './fast2sms';
+import { sendBulkSMS } from '@/lib/fast2sms';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -29,27 +28,26 @@ export interface ImportResult {
 }
 
 // ─── CSV COLUMN DEFINITIONS ───────────────────────────────────────────────────
-// These are the exact headers the school must use in their CSV file
 
 export const CSV_TEMPLATES: Record<ImportUserRole, string[]> = {
   student: [
-    'name',           // Full student name
-    'class',          // e.g. "5"
-    'section',        // e.g. "A"
-    'roll_number',    // e.g. "12"
-    'parent_phone',   // 10-digit — this becomes the parent's login
-    'address',        // Optional
-    'dob',            // DD/MM/YYYY
-    'gender',         // Male / Female
-    'admission_date', // DD/MM/YYYY
+    'name',
+    'class',
+    'section',
+    'roll_number',
+    'parent_phone',
+    'address',
+    'dob',
+    'gender',
+    'admission_date',
   ],
   teacher: [
     'name',
-    'phone',           // 10-digit — their login number
+    'phone',
     'subject',
     'class_assigned',
     'section_assigned',
-    'joining_date',    // DD/MM/YYYY
+    'joining_date',
   ],
   parent: [
     'name',
@@ -61,7 +59,7 @@ export const CSV_TEMPLATES: Record<ImportUserRole, string[]> = {
   admin: [
     'name',
     'phone',
-    'designation',     // e.g. "Principal"
+    'designation',
   ],
   accountant: [
     'name',
@@ -159,7 +157,7 @@ function validateRow(
 
 // ─── FIRESTORE BATCH WRITER ───────────────────────────────────────────────────
 
-const BATCH_SIZE = 450; // Firestore limit is 500, keeping buffer
+const BATCH_SIZE = 450;
 
 async function writeBatchToFirestore(
   schoolId: string,
@@ -172,7 +170,6 @@ async function writeBatchToFirestore(
   const errors: { row: number; name: string; reason: string }[] = [];
   let successCount = 0;
 
-  // Split into chunks of 450
   const chunks: Record<string, string>[][] = [];
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     chunks.push(records.slice(i, i + BATCH_SIZE));
@@ -185,14 +182,14 @@ async function writeBatchToFirestore(
 
     for (let i = 0; i < chunk.length; i++) {
       const row = chunk[i];
-      const rowIndex = rowOffset + i + 2; // +2 for header row + 1-based index
+      const rowIndex = rowOffset + i + 2;
 
       try {
         const rawPhone = role === 'student' ? row.parent_phone : row.phone;
         const cleanPhone = rawPhone?.replace(/\s+/g, '');
 
         if (role === 'student') {
-          // ── Add student to schools/{schoolId}/students/ ──
+          // Add student record
           const studentRef = doc(collection(db, 'schools', schoolId, 'students'));
           batch.set(studentRef, {
             name: row.name,
@@ -208,7 +205,7 @@ async function writeBatchToFirestore(
             source: 'csv_import',
           });
 
-          // ── Create parent login in users/{phone} ──
+          // Create parent login
           if (cleanPhone) {
             const parentRef = doc(db, 'users', cleanPhone);
             batch.set(
@@ -224,11 +221,11 @@ async function writeBatchToFirestore(
                 created_at: serverTimestamp(),
                 source: 'csv_import',
               },
-              { merge: true } // merge so a parent with 2 kids isn't overwritten
+              { merge: true }
             );
           }
         } else {
-          // ── Add staff/teacher/admin/accountant/driver ──
+          // Add staff record
           const staffRef = doc(collection(db, 'schools', schoolId, 'staff'));
           batch.set(staffRef, {
             name: row.name,
@@ -245,7 +242,7 @@ async function writeBatchToFirestore(
             source: 'csv_import',
           });
 
-          // ── Create user login in users/{phone} ──
+          // Create user login
           if (cleanPhone) {
             const userRef = doc(db, 'users', cleanPhone);
             batch.set(
@@ -300,35 +297,25 @@ async function notifyUsersViaSMS(
         ? `Dear Parent, your child is registered on MyChalkPad for ${schoolName}. Login with your mobile number to view attendance, marks & pay fees. App: mychalkpad.com`
         : `Dear ${role.charAt(0).toUpperCase() + role.slice(1)}, you are registered on MyChalkPad for ${schoolName}. Login with your mobile number. App: mychalkpad.com`;
 
-    // Fast2SMS sendBulkSMS accepts array of phone strings + message
     await sendBulkSMS(phones, message, 'en');
   } catch (err) {
-    // SMS failure must NOT block the import
-    console.error('[csvImport] SMS notification failed (import was still successful):', err);
+    // SMS failure must NEVER block the import
+    console.error('[csvImport] SMS failed (import still succeeded):', err);
   }
 }
 
 // ─── MAIN FUNCTION ────────────────────────────────────────────────────────────
 
-/**
- * importFromCSV — Call this from your screen
- *
- * @param csvText    Raw CSV string (read from the file picker)
- * @param role       Which type of users are in this CSV
- * @param schoolId   Firestore school document ID
- * @param schoolName Human-readable school name (used in SMS)
- * @returns          ImportResult with success count and any errors
- */
 export async function importFromCSV(
   csvText: string,
   role: ImportUserRole,
   schoolId: string,
   schoolName: string
 ): Promise<ImportResult> {
-  // Step 1: Parse CSV text into rows
+  // Step 1: Parse
   const rows = parseCSV(csvText);
 
-  // Step 2: Validate every row
+  // Step 2: Validate
   const validRows: Record<string, string>[] = [];
   const validationErrors: { row: number; name: string; reason: string }[] = [];
 
@@ -353,14 +340,14 @@ export async function importFromCSV(
     };
   }
 
-  // Step 3: Write to Firestore in batches
+  // Step 3: Write to Firestore
   const { successCount, errors: writeErrors } = await writeBatchToFirestore(
     schoolId,
     role,
     validRows
   );
 
-  // Step 4: Send SMS to all successfully registered users
+  // Step 4: Send SMS
   if (successCount > 0) {
     await notifyUsersViaSMS(validRows, role, schoolName);
   }
@@ -374,10 +361,6 @@ export async function importFromCSV(
 
 // ─── TEMPLATE GENERATOR ───────────────────────────────────────────────────────
 
-/**
- * generateCSVTemplate — Returns a sample CSV string for the given role
- * Use this so admin can download a blank template from the app
- */
 export function generateCSVTemplate(role: ImportUserRole): string {
   const headers = CSV_TEMPLATES[role];
 
