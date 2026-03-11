@@ -1,6 +1,5 @@
 // app/admin/bulk-import.tsx
 // Bulk CSV Import Screen — Admin only
-// Place this file in your app/admin/ folder
 
 import React, { useState } from 'react';
 import {
@@ -11,24 +10,23 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-  Share,
-  Platform,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useRouter } from 'expo-router';
+import { doc, getDoc } from 'firebase/firestore';
+
+// ✅ FIXED: using your actual storage functions
+import { getUserSession } from '@/lib/storage';
+import { db } from '@/lib/firebase';
 
 import {
   importFromCSV,
   generateCSVTemplate,
   ImportUserRole,
   ImportResult,
-} from '../../lib/csvImport';
-
-// ─── Read school info from your SecureStore / auth context ───────────────────
-// Replace these with however you currently read school info in your app
- import { getUserSession } from '../../lib/storage';// your existing SecureStore helper
+} from '@/lib/csvImport';
 
 // ─── ROLE OPTIONS ─────────────────────────────────────────────────────────────
 
@@ -64,7 +62,6 @@ export default function BulkImportScreen() {
 
       const file = res.assets[0];
 
-      // Validate it's a .csv file
       if (!file.name.toLowerCase().endsWith('.csv')) {
         Alert.alert('Wrong File', 'Please select a .csv file only.');
         return;
@@ -76,7 +73,7 @@ export default function BulkImportScreen() {
 
       setFileName(file.name);
       setCsvContent(content);
-      setResult(null); // clear previous result
+      setResult(null);
     } catch (err) {
       Alert.alert('Error', 'Could not read file. Please try again.');
     }
@@ -124,48 +121,58 @@ export default function BulkImportScreen() {
       return;
     }
 
-    // Get school info from SecureStore
-    const session    = await getUserSession();
-    const schoolId   = session?.schoolId ?? null;
-    const schoolName = session?.name ?? 'Your School';
+    try {
+      // ✅ FIXED: using getUserSession() from your actual storage.ts
+      const session  = await getUserSession();
+      const schoolId = session?.schoolId ?? null;
 
-    if (!schoolId) {
-      Alert.alert('Error', 'School ID not found. Please log out and log in again.');
-      return;
-    }
+      if (!schoolId) {
+        Alert.alert('Error', 'School ID not found. Please log out and log in again.');
+        return;
+      }
 
-    // Confirm before running
-    Alert.alert(
-      'Start Import?',
-      `This will import all ${selectedRole}s from "${fileName}" into Firestore and send SMS to each user.\n\nContinue?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Import',
-          style: 'default',
-          onPress: async () => {
-            setLoading(true);
-            setResult(null);
-            try {
-              const importResult = await importFromCSV(
-                csvContent,
-                selectedRole,
-                schoolId,
-                schoolName
-              );
-              setResult(importResult);
-            } catch (err: any) {
-              Alert.alert(
-                'Import Failed',
-                err?.message || 'Something went wrong. Please check your CSV format.'
-              );
-            } finally {
-              setLoading(false);
-            }
+      // ✅ FIXED: fetch real school name from Firestore schools collection
+      let schoolName = 'Your School';
+      const schoolSnap = await getDoc(doc(db, 'schools', schoolId));
+      if (schoolSnap.exists()) {
+        schoolName = schoolSnap.data()?.name ?? 'Your School';
+      }
+
+      // Confirm before running
+      Alert.alert(
+        'Start Import?',
+        `This will import all ${selectedRole}s from "${fileName}" into Firestore and send SMS to each user.\n\nSchool: ${schoolName}\n\nContinue?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Import',
+            style: 'default',
+            onPress: async () => {
+              setLoading(true);
+              setResult(null);
+              try {
+                const importResult = await importFromCSV(
+                  csvContent,
+                  selectedRole,
+                  schoolId,
+                  schoolName
+                );
+                setResult(importResult);
+              } catch (err: any) {
+                Alert.alert(
+                  'Import Failed',
+                  err?.message || 'Something went wrong. Please check your CSV format.'
+                );
+              } finally {
+                setLoading(false);
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Could not load school info. Please try again.');
+    }
   };
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
