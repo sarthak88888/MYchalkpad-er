@@ -1,0 +1,59 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── School-scoped files ───────────────────────────────────────────────
+    match /schools/{schoolId}/{allPaths=**} {
+
+      // Anyone authenticated can read school files
+      allow read: if request.auth != null;
+
+      // Only allow upload if:
+      // - User is authenticated
+      // - File is under 10 MB
+      // - File is an image or PDF
+      allow write: if request.auth != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf');
+
+      // Specific folder rules ────────────────────────────────────────────
+
+      // Student photos — images only, 2 MB max
+      match /student_photos/{photoId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null
+          && request.resource.size < 2 * 1024 * 1024
+          && request.resource.contentType.matches('image/.*');
+      }
+
+      // Staff photos — images only, 2 MB max
+      match /staff_photos/{photoId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null
+          && request.resource.size < 2 * 1024 * 1024
+          && request.resource.contentType.matches('image/.*');
+      }
+
+      // Documents (TCs, reports) — PDF only, 5 MB max
+      match /documents/{docId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null
+          && request.resource.size < 5 * 1024 * 1024
+          && request.resource.contentType == 'application/pdf';
+      }
+
+      // Signature / stamp images — images only, 1 MB max
+      match /signatures/{sigId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null
+          && request.resource.size < 1 * 1024 * 1024
+          && request.resource.contentType.matches('image/.*');
+      }
+    }
+
+    // ── Block everything else ─────────────────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
