@@ -1,7 +1,19 @@
 // lib/types.ts — Shared TypeScript types for MyChalkPad ERP
 
 export type UserRole =
- 
+  | 'admin'
+  | 'super_admin'
+  | 'principal'
+  | 'teacher'
+  | 'class_teacher'
+  | 'parent'
+  | 'accountant'
+  | 'driver'
+  | 'bus_driver'
+  | 'student';
+
+// Staff is an alias for StaffMember (used in driver/index.tsx, teacher/profile.tsx)
+export type Staff = StaffMember;
 
 export interface School {
   id: string;
@@ -45,6 +57,10 @@ export interface StaffMember {
   address?: string;
   photoUrl?: string;
   isActive: boolean;
+  assigned_class?: string;
+  assigned_section?: string;
+  bus_route?: string;
+  bus_number?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +81,7 @@ export interface Student {
   address?: string;
   photoUrl?: string;
   admissionDate?: string;
+  bus_route?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -105,6 +122,7 @@ export interface FeeRecord {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
 export interface MarksRecord {
   id: string;
   schoolId: string;
