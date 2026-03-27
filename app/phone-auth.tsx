@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+]import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
-  ScrollView, Animated,
+  ScrollView, Animated, Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -40,7 +40,7 @@ export default function PhoneAuthScreen() {
     const session = await getUserSession();
     const bioEnabled = await getBiometricEnabled();
     setBiometricAvailable(bioEnabled);
-    if (session.phone && session.role) {
+    if (session && session.phone && session.role) {
       if (bioEnabled) {
         setScreen('biometric');
       } else {
@@ -50,10 +50,12 @@ export default function PhoneAuthScreen() {
   }
 
   async function handleBiometricLogin() {
-    const result = await authenticateWithBiometric();
-    if (result.success) {
+    const success = await authenticateWithBiometric();
+    if (success) {
       const session = await getUserSession();
-      navigateByRole(session.role);
+      if (session) {
+        navigateByRole(session.role);
+      }
     } else {
       Alert.alert('Biometric Failed', 'Could not verify. Please log in with phone number.');
       setScreen('phone');
@@ -150,7 +152,6 @@ export default function PhoneAuthScreen() {
           name: staff.name,
           role,
           schoolId: sid,
-          staffId: staffSnap.docs[0].id,
         });
         navigateByRole(role);
         return;
@@ -410,7 +411,7 @@ export default function PhoneAuthScreen() {
   );
 }
 
-const { width } = Dimensions;
+const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
