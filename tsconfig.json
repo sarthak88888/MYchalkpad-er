@@ -4,8 +4,7 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@/lib/*": ["./lib/*"]
+      "@/*": ["./*"]
     },
     "moduleResolution": "bundler"
   }
