@@ -8,9 +8,11 @@ export type UserRole =
   | 'super_admin'
   | 'principal'
   | 'teacher'
+  | 'class_teacher'
   | 'parent'
   | 'accountant'
   | 'driver'
+  | 'bus_driver'
   | 'student'; //  added (used in types)
 
 // ─── Keys ─────────────────────────────────────────────────────────────────────
@@ -40,19 +42,39 @@ export interface UserSession {
 // ─── User Session ─────────────────────────────────────────────────────────────
 
 export async function saveUserSession(
-  phone: string,
-  role: UserRole,
-  schoolId: string,
+  sessionOrPhone: UserSession | { phone: string; role: UserRole; schoolId: string; name?: string } | string,
+  role?: UserRole,
+  schoolId?: string,
   name?: string,
 ): Promise<void> {
-  const session: UserSession = {
-    uid: phone,
-    phone,
-    email: null,
-    role,
-    schoolId,
-    name: name ?? '',
-  };
+  let session: UserSession;
+
+  if (typeof sessionOrPhone === 'string') {
+    // Called as saveUserSession(phone, role, schoolId, name?)
+    session = {
+      uid: sessionOrPhone,
+      phone: sessionOrPhone,
+      email: null,
+      role: role!,
+      schoolId: schoolId!,
+      name: name ?? '',
+    };
+  } else if ('uid' in sessionOrPhone) {
+    // Called as saveUserSession(UserSession)
+    session = sessionOrPhone as UserSession;
+  } else {
+    // Called as saveUserSession({ phone, role, schoolId, name? })
+    const obj = sessionOrPhone as { phone: string; role: UserRole; schoolId: string; name?: string };
+    session = {
+      uid: obj.phone,
+      phone: obj.phone,
+      email: null,
+      role: obj.role,
+      schoolId: obj.schoolId,
+      name: obj.name ?? '',
+    };
+  }
+
   await AsyncStorage.setItem(KEYS.USER_SESSION, JSON.stringify(session));
 }
 
