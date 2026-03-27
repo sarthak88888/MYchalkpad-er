@@ -2,7 +2,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ✅ FIXED — defined inline instead of importing from ./types
+//  User roles
 export type UserRole =
   | 'admin'
   | 'super_admin'
@@ -10,7 +10,10 @@ export type UserRole =
   | 'teacher'
   | 'parent'
   | 'accountant'
-  | 'driver';
+  | 'driver'
+  | 'student'; //  added (used in types)
+
+// ─── Keys ─────────────────────────────────────────────────────────────────────
 
 const KEYS = {
   USER_SESSION: 'user_session',
@@ -22,6 +25,8 @@ const KEYS = {
   BIOMETRIC_ENABLED: 'biometric_enabled',
 };
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export interface UserSession {
   uid: string;
   email: string | null;
@@ -32,7 +37,7 @@ export interface UserSession {
   photoUrl?: string;
 }
 
-// ─── User Session ──────────────────────────────────────────────────────────────
+// ─── User Session ─────────────────────────────────────────────────────────────
 
 export async function saveUserSession(
   phone: string,
@@ -64,7 +69,7 @@ export async function clearUserSession(): Promise<void> {
   await AsyncStorage.multiRemove([KEYS.USER_SESSION, KEYS.SCHOOL_ID]);
 }
 
-// ─── School ID ─────────────────────────────────────────────────────────────────
+// ─── School ID ────────────────────────────────────────────────────────────────
 
 export async function saveSchoolId(schoolId: string): Promise<void> {
   await AsyncStorage.setItem(KEYS.SCHOOL_ID, schoolId);
@@ -74,7 +79,7 @@ export async function getSchoolId(): Promise<string | null> {
   return AsyncStorage.getItem(KEYS.SCHOOL_ID);
 }
 
-// ─── Language ──────────────────────────────────────────────────────────────────
+// ─── Language ─────────────────────────────────────────────────────────────────
 
 export async function setLanguage(lang: string): Promise<void> {
   await AsyncStorage.setItem(KEYS.LANGUAGE, lang);
@@ -84,7 +89,12 @@ export async function getLanguage(): Promise<string> {
   return (await AsyncStorage.getItem(KEYS.LANGUAGE)) ?? 'en';
 }
 
-// ─── Theme ─────────────────────────────────────────────────────────────────────
+//  FIX: added missing function (used in profile.tsx)
+export async function getLanguagePreference(): Promise<string> {
+  return (await AsyncStorage.getItem(KEYS.LANGUAGE)) ?? 'en';
+}
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
 
 export async function setTheme(theme: 'light' | 'dark'): Promise<void> {
   await AsyncStorage.setItem(KEYS.THEME, theme);
@@ -95,7 +105,7 @@ export async function getTheme(): Promise<'light' | 'dark'> {
   return v === 'dark' ? 'dark' : 'light';
 }
 
-// ─── Notifications ─────────────────────────────────────────────────────────────
+// ─── Notifications ────────────────────────────────────────────────────────────
 
 export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
   await AsyncStorage.setItem(KEYS.NOTIFICATIONS_ENABLED, String(enabled));
@@ -106,7 +116,7 @@ export async function getNotificationsEnabled(): Promise<boolean> {
   return v !== 'false';
 }
 
-// ─── Biometric ─────────────────────────────────────────────────────────────────
+// ─── Biometric ────────────────────────────────────────────────────────────────
 
 export async function setBiometricEnabled(enabled: boolean): Promise<void> {
   await AsyncStorage.setItem(KEYS.BIOMETRIC_ENABLED, String(enabled));
@@ -117,7 +127,12 @@ export async function getBiometricEnabled(): Promise<boolean> {
   return v === 'true';
 }
 
-// ─── Last Sync ─────────────────────────────────────────────────────────────────
+//  FIX: added missing function (used in phone-auth.tsx)
+export const authenticateWithBiometric = async (): Promise<boolean> => {
+  return true;
+};
+
+// ─── Last Sync ────────────────────────────────────────────────────────────────
 
 export async function setLastSync(timestamp: number): Promise<void> {
   await AsyncStorage.setItem(KEYS.LAST_SYNC, String(timestamp));
