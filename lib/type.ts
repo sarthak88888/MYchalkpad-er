@@ -1,6 +1,7 @@
 // lib/types.ts — Shared TypeScript types for MyChalkPad ERP
 
-export type UserRole = 'admin' | 'teacher' | 'accountant' | 'parent' | 'student';
+export type UserRole =
+ 
 
 export interface School {
   id: string;
