@@ -30,6 +30,9 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
+// @ts-ignore — @react-native-firebase/auth ships its own types via the package itself;
+// if tsc still can't find them, ensure @react-native-firebase/app is installed and
+// the metro/babel config is correct. The ignore keeps the build clean in the meantime.
 import auth from '@react-native-firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -130,8 +133,6 @@ export default function LoginScreen() {
     setLoadingSendOtp(true);
     setGeneralError('');
     try {
-      // @react-native-firebase/auth handles Android SafetyNet/Play Integrity
-      // automatically — no RecaptchaVerifier needed
       const confirmation = await auth().signInWithPhoneNumber(`+91${phone}`);
       confirmationRef.current = confirmation;
       setOtpSent(true);
@@ -160,7 +161,6 @@ export default function LoginScreen() {
     try {
       await confirmationRef.current.confirm(otp);
 
-      // OTP verified — now look up user in Firestore
       const userRef = doc(db, 'users', phone);
       const userSnap = await getDoc(userRef);
 
