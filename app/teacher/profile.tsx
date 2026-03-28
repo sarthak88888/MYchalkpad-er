@@ -23,7 +23,11 @@ export default function TeacherProfileScreen() {
 
   async function initScreen() {
     const session = await getUserSession();
-    setPhone(session.phone);
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+    setPhone(session.phone ?? '');
     const bio = await getBiometricEnabled();
     setBiometricEnabledState(bio);
     const lang = await getLanguagePreference();
