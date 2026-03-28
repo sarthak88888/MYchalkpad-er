@@ -1,7 +1,13 @@
 // @ts-ignore — react-native-razorpay does not ship TypeScript declarations.
 // To resolve cleanly: run `npm i --save-dev @types/react-native-razorpay`
 // or add a declarations.d.ts with: declare module 'react-native-razorpay';
-import RazorpayCheckout from 'react-native-razorpay';
+// @ts-ignore
+let RazorpayCheckout: any = null;
+try {
+  RazorpayCheckout = require('react-native-razorpay').default;
+} catch (e) {
+  console.warn('Razorpay not available in Expo Go');
+}
 import Constants from 'expo-constants';
 export interface PaymentResult {
   success: boolean;
