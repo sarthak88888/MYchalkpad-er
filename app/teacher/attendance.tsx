@@ -174,7 +174,7 @@ export default function TeacherAttendanceScreen() {
             try {
               for (const a of absentStudents) {
                 const msg = `MyChalkPad: Dear Parent, ${a.student.name} was absent from Class ${assignedClass}-${assignedSection} on ${selectedDate}. Please contact school if needed.`;
-                await sendSMS([a.student.parent_phone], msg);
+                await sendSMS([a.student.parent_phone ?? ''], msg); 
               }
               Alert.alert('Done', `Absence SMS sent to ${absentStudents.length} parents.`);
             } catch (e) {
