@@ -37,10 +37,13 @@ export default function TeacherDashboard() {
 
   async function initDashboard() {
     const session = await getUserSession();
+    if (!session) {
+      setLoading(false);
+      return;
+    }
     setTeacherName(session.name ?? 'Teacher');
     setSchoolId(session.schoolId);
 
-    // Load teacher profile to get assigned class/section
     try {
       const staffSnap = await getDocs(
         query(collection(db, 'schools', session.schoolId, 'staff'),
