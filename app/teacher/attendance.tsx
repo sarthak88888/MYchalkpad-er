@@ -53,8 +53,9 @@ export default function TeacherAttendanceScreen() {
 
   async function initScreen() {
     const session = await getUserSession();
+    if (!session) return;
     setSchoolId(session.schoolId);
-    setTeacherPhone(session.phone);
+    setTeacherPhone(session.phone ?? '');
     try {
       const staffSnap = await getDocs(query(
         collection(db, 'schools', session.schoolId, 'staff'),
