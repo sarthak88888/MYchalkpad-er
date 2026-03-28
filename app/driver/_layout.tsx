@@ -4,14 +4,12 @@ import { Tabs, router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getUserSession } from '@/lib/storage';
 import { COLORS } from '@/lib/theme';
-
 export default function DriverLayout() {
   const [checking, setChecking] = useState(true);
-
   useEffect(() => {
     async function checkRole() {
       const session = await getUserSession();
-      if (!session ||!session.role || session.role !== 'bus_driver') {
+      if (!session || !session.role || session.role !== 'bus_driver') {
         router.replace('/');
       } else {
         setChecking(false);
@@ -19,7 +17,6 @@ export default function DriverLayout() {
     }
     checkRole();
   }, []);
-
   if (checking) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
@@ -27,7 +24,6 @@ export default function DriverLayout() {
       </View>
     );
   }
-
   return (
     <Tabs
       screenOptions={{
