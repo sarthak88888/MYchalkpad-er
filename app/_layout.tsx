@@ -79,4 +79,4 @@ export default function RootLayout() {
       </PaperProvider>
     </SafeAreaProvider>
   );
-}  app /layout.tsx
+}  
