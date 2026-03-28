@@ -66,7 +66,7 @@ export default function TeacherStudentsScreen() {
         where('section', '==', sec)
       ));
       const studs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Student));
-      studs.sort((a, b) => (a.roll_number ?? 0) - (b.roll_number ?? 0));
+      studs.sort((a, b) => (Number(a.roll_number) ?? 0) - (Number(b.roll_number) ?? 0));
       setStudents(studs);
       setFiltered(studs);
     } catch (e) { console.error(e); }
@@ -119,7 +119,7 @@ export default function TeacherStudentsScreen() {
           <View style={styles.cardInfo}>
             <Text style={styles.cardName}>{item.name}</Text>
             <Text style={styles.cardMeta}>Roll {item.roll_number} • {item.parent_phone}</Text>
-            {item.fees_due > 0 && (
+            {(item.fees_due ?? 0) > 0 && (
               <Text style={styles.feeDue}>₹{item.fees_due} due</Text>
             )}
           </View>
@@ -213,8 +213,8 @@ export default function TeacherStudentsScreen() {
                       <Text style={styles.detailStatLabel}>Marks Entries</Text>
                     </View>
                     <View style={styles.detailStat}>
-                      <Text style={[styles.detailStatVal, { color: selectedStudent.fees_due > 0 ? COLORS.error : COLORS.success }]}>
-                        {selectedStudent.fees_due > 0 ? `₹${selectedStudent.fees_due}` : 'Clear'}
+                      <Text style={[styles.detailStatVal, { color: (selectedStudent.fees_due ?? 0) > 0 ? COLORS.error : COLORS.success }]}>
+                        {(selectedStudent.fees_due ?? 0) > 0 ? `₹${selectedStudent.fees_due}` : 'Clear'}
                       </Text>
                       <Text style={styles.detailStatLabel}>Fees Due</Text>
                     </View>
@@ -223,7 +223,7 @@ export default function TeacherStudentsScreen() {
                   {/* Info Rows */}
                   {[
                     { label: 'Parent Name', value: selectedStudent.parent_name || 'N/A', icon: 'account' },
-                    { label: 'Parent Phone', value: selectedStudent.parent_phone, icon: 'phone' },
+                    { label: 'Parent Phone', value: selectedStudent.parent_phone ?? 'N/A', icon: 'phone' },
                     { label: 'Date of Birth', value: selectedStudent.dob || 'N/A', icon: 'cake' },
                     { label: 'Address', value: selectedStudent.address || 'N/A', icon: 'map-marker' },
                     { label: 'Admission Date', value: selectedStudent.admission_date || 'N/A', icon: 'calendar' },
