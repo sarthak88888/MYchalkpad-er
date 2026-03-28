@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { UserRole } from '@/lib/types';
 import { COLORS } from '@/lib/theme';
+
 const paperTheme = {
   ...MD3LightTheme,
   colors: {
@@ -19,10 +20,12 @@ const paperTheme = {
     background: COLORS.background,
   },
 };
+
 export default function RootLayout() {
   useEffect(() => {
     loadLanguage();
   }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(async (user) => {
       if (!user) {
@@ -51,7 +54,7 @@ export default function RootLayout() {
             router.replace('/teacher');
             break;
           case 'parent':
-            router.replace('/parents'); // ✅ fixed: folder is 'parents' not 'parent'
+            router.replace('/parents');
             break;
           case 'accountant':
             router.replace('/accountant');
@@ -66,6 +69,7 @@ export default function RootLayout() {
     });
     return () => unsubscribe();
   }, []);
+
   return (
     <SafeAreaProvider>
       <PaperProvider theme={paperTheme}>
@@ -73,10 +77,10 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="admin" />
           <Stack.Screen name="teacher" />
-          <Stack.Screen name="parents" /> {/* ✅ fixed: was 'parent' */}
+          <Stack.Screen name="parents" />
           <Stack.Screen name="accountant" />
         </Stack>
       </PaperProvider>
     </SafeAreaProvider>
   );
-}  
+}
