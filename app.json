@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -131,11 +131,10 @@
       "sentryDsn": "https://070f59a444a64901fcb2f21eedc3b730@o4511002038173696.ingest.us.sentry.io/4511002255425536",
       "razorpayKeyId": "REPLACE_WITH_YOUR_RAZORPAY_KEY",
       "interaktApiKey": "REPLACE_WITH_YOUR_INTERAKT_KEY",
-      "fast2smsApiKey": "jc3NzlT8uM5tdJDbqW2iaU9R4ZEIYQoxHfe7hyXAnGL1mSgkCOBuj9F475bolveDAfOEiKMhc1w3WzkC"
-    },
+      "fast2smsApiKey": "jc3NzlT8uM5tdJDbqW2iaU9R4ZEIYQoxHfe7hyXAnGL1mSgkCOBuj9F475bolveDAfOEiKMhc1w3WzkC    },
     "updates": {
       "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/129ddaa6-f2c4-4747-b897-08c4c46c2e5a"
+      "url": ""
     },
     "owner": "chalkpad"
   }
