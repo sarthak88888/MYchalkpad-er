@@ -91,13 +91,13 @@ export interface Student {
   createdAt: Date;
   updatedAt: Date;
   // snake_case aliases used in UI code
-  roll_number?: string | number;
+  roll_number?: number;
   parent_name?: string;
   parent_phone?: string;
   parent_email?: string;
   dob?: string;
   admission_date?: string;
-  fees_due?: number;
+  fees_due: number;
 }
 
 export interface AttendanceRecord {
@@ -156,8 +156,8 @@ export interface MarksRecord {
   // snake_case aliases used in UI code
   student_id?: string;
   exam_type?: string;
-  max_marks?: number;
-  marks?: number;
+  max_marks: number;
+  marks: number;
 }
 
 export interface Complaint {
