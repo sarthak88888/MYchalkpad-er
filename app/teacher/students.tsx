@@ -105,7 +105,7 @@ export default function TeacherStudentsScreen() {
     const latest = sm.filter(m => m.exam_type === 'Annual').length > 0
       ? sm.filter(m => m.exam_type === 'Annual')
       : sm;
-    const avg = latest.reduce((s, m) => s + (m.marks / m.max_marks) * 100, 0) / latest.length;
+    const avg = latest.reduce((s, m) => s + ((m.marks ?? m.obtainedMarks) / (m.max_marks ?? m.maxMarks)) * 100, 0) / latest.length;
     return { avg: parseFloat(avg.toFixed(1)), count: latest.length };
   }
 
