@@ -1,6 +1,8 @@
+// @ts-ignore — react-native-razorpay does not ship TypeScript declarations.
+// To resolve cleanly: run `npm i --save-dev @types/react-native-razorpay`
+// or add a declarations.d.ts with: declare module 'react-native-razorpay';
 import RazorpayCheckout from 'react-native-razorpay';
 import Constants from 'expo-constants';
-
 export interface PaymentResult {
   success: boolean;
   payment_id?: string;
@@ -8,7 +10,6 @@ export interface PaymentResult {
   signature?: string;
   error?: string;
 }
-
 export async function initiatePayment(
   amount: number,
   studentName: string,
@@ -17,16 +18,13 @@ export async function initiatePayment(
 ): Promise<PaymentResult> {
   const keyId: string =
     Constants.expoConfig?.extra?.razorpayKeyId ?? '';
-
   if (!keyId || keyId === 'REPLACE_WITH_YOUR_RAZORPAY_KEY') {
     return {
       success: false,
       error: 'Razorpay key not configured. Please contact school administration.',
     };
   }
-
   const amountInPaise = Math.round(amount * 100);
-
   const options = {
     description: description,
     image: 'https://mychalkpad.com/logo.png',
@@ -47,7 +45,6 @@ export async function initiatePayment(
       description: description,
     },
   };
-
   return new Promise((resolve) => {
     RazorpayCheckout.open(options)
       .then((data: any) => {
