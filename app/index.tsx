@@ -1,19 +1,11 @@
 /**
  * app/index.tsx — Login Screen
  *
- * Uses @react-native-firebase/auth for phone OTP.
- * This is the correct native approach for React Native production apps.
+ * Uses Firebase Web SDK (firebase/auth) for phone OTP.
+ * Compatible with Expo Go for testing.
  *
- * SETUP REQUIRED (one time):
- *   npm install @react-native-firebase/app @react-native-firebase/auth
- *   npx expo install expo-build-properties
- *
- * In app.json plugins add:
- *   "@react-native-firebase/app",
- *   "@react-native-firebase/auth"
- *
- * Keep lib/firebase.ts using web SDK for Firestore/Storage (that's fine).
- * Only Auth uses @react-native-firebase/auth.
+ * For production builds, switch to @react-native-firebase/auth
+ * for better performance and Play Integrity support.
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -30,12 +22,13 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-// @ts-ignore — @react-native-firebase/auth ships its own types via the package itself;
-// if tsc still can't find them, ensure @react-native-firebase/app is installed and
-// the metro/babel config is correct. The ignore keeps the build clean in the meantime.
-import auth from '@react-native-firebase/auth';
+import {
+  signInWithPhoneNumber,
+  ConfirmationResult,
+  RecaptchaVerifier,
+} from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import {
   saveUserSession,
   getBiometricEnabled,
@@ -58,7 +51,7 @@ export default function LoginScreen() {
   const [showBiometricModal, setShowBiometricModal] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
 
-  const confirmationRef = useRef<any>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   useEffect(() => {
     checkBiometricLogin();
@@ -133,7 +126,17 @@ export default function LoginScreen() {
     setLoadingSendOtp(true);
     setGeneralError('');
     try {
-      const confirmation = await auth().signInWithPhoneNumber(`+91${phone}`);
+      // RecaptchaVerifier works in Expo Go via the web Firebase SDK
+      const recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        'recaptcha-container',
+        { size: 'invisible' }
+      );
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        `+91${phone}`,
+        recaptchaVerifier
+      );
       confirmationRef.current = confirmation;
       setOtpSent(true);
     } catch (error: any) {
@@ -230,6 +233,9 @@ export default function LoginScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Invisible recaptcha container required by Firebase Web SDK */}
+      <View nativeID="recaptcha-container" />
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
