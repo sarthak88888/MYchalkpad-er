@@ -35,7 +35,6 @@ export async function signOut(): Promise<void> {
   await firebaseSignOut(auth);
 }
 
-// ✅ Wrap onAuthStateChanged so auth is always passed
 export function onAuthStateChanged(
   callback: (user: User | null) => void
 ): () => void {
