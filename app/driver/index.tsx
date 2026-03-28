@@ -33,8 +33,12 @@ export default function DriverDashboard() {
 
   async function initScreen() {
     const session = await getUserSession();
+    if (!session) {
+      router.replace('/');
+      return;
+    }
     setSchoolId(session.schoolId);
-    setPhone(session.phone);
+    setPhone(session.phone ?? '');
     try {
       const staffSnap = await getDocs(query(
         collection(db, 'schools', session.schoolId, 'staff'),
