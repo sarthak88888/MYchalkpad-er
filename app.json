@@ -15,6 +15,7 @@
     },
     "android": {
       "package": "com.mychalkpad.erp",
+      "jsEngine": "hermes"
       "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
