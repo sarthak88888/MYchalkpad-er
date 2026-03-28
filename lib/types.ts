@@ -52,6 +52,7 @@ export interface StaffMember {
   designation?: string;
   department?: string;
   qualification?: string;
+  // camelCase
   joiningDate?: string;
   salary?: number;
   address?: string;
@@ -63,13 +64,17 @@ export interface StaffMember {
   bus_number?: string;
   createdAt: Date;
   updatedAt: Date;
+  // snake_case aliases used in UI code
+  joining_date?: string;
+  subject?: string;
 }
 
 export interface Student {
   id: string;
   schoolId: string;
   name: string;
-  rollNumber: string;
+  // camelCase
+  rollNumber?: string;
   class: string;
   section: string;
   parentId?: string;
@@ -85,6 +90,14 @@ export interface Student {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // snake_case aliases used in UI code
+  roll_number?: string | number;
+  parent_name?: string;
+  parent_phone?: string;
+  parent_email?: string;
+  dob?: string;
+  admission_date?: string;
+  fees_due?: number;
 }
 
 export interface AttendanceRecord {
@@ -126,6 +139,7 @@ export interface FeeRecord {
 export interface MarksRecord {
   id: string;
   schoolId: string;
+  // camelCase
   studentId: string;
   studentName: string;
   class: string;
@@ -139,6 +153,11 @@ export interface MarksRecord {
   enteredBy?: string;
   createdAt: Date;
   updatedAt: Date;
+  // snake_case aliases used in UI code
+  student_id?: string;
+  exam_type?: string;
+  max_marks?: number;
+  marks?: number;
 }
 
 export interface Complaint {
