@@ -16,6 +16,9 @@ import {
   getUserSession,
 } from '@/lib/storage';
 import { COLORS } from '@/lib/theme';
+import { UserRole } from '@/lib/types';
+
+const { width } = Dimensions.get('window');
 
 type Screen = 'phone' | 'otp' | 'biometric';
 
@@ -62,13 +65,18 @@ export default function PhoneAuthScreen() {
     }
   }
 
-  function navigateByRole(role: string) {
-    const routes: Record<string, string> = {
+  function navigateByRole(role: UserRole) {
+    const routes: Record<UserRole, string> = {
       admin: '/admin',
+      super_admin: '/admin',
+      principal: '/admin',
+      teacher: '/teacher',
       class_teacher: '/teacher',
       parent: '/parent',
       bus_driver: '/driver',
+      driver: '/driver',
       accountant: '/accountant',
+      student: '/',
     };
     router.replace((routes[role] ?? '/admin') as any);
   }
@@ -81,8 +89,6 @@ export default function PhoneAuthScreen() {
     }
     setLoading(true);
     try {
-      // In production: Use Firebase Phone Auth with RecaptchaVerifier
-      // For development/testing: Use a mock verification ID
       const fullPhone = `+91${cleaned}`;
 
       // Mock flow for development — replace with real Firebase phone auth in production:
@@ -126,7 +132,6 @@ export default function PhoneAuthScreen() {
   }
 
   async function resolveUserRole(phoneNum: string) {
-    // Try staff collection first (multiple schools)
     const allSchoolsSnap = await getDocs(collection(db, 'schools'));
     for (const schoolDoc of allSchoolsSnap.docs) {
       const sid = schoolDoc.id;
@@ -138,7 +143,7 @@ export default function PhoneAuthScreen() {
       ));
       if (!staffSnap.empty) {
         const staff = staffSnap.docs[0].data();
-        const roleMap: Record<string, string> = {
+        const roleMap: Record<string, UserRole> = {
           'Principal': 'admin',
           'Vice Principal': 'admin',
           'Class Teacher': 'class_teacher',
@@ -146,7 +151,7 @@ export default function PhoneAuthScreen() {
           'Accountant': 'accountant',
           'Bus Driver': 'bus_driver',
         };
-        const role = roleMap[staff.role] ?? 'class_teacher';
+        const role: UserRole = roleMap[staff.role] ?? 'class_teacher';
         await saveUserSession({
           phone: phoneNum,
           name: staff.name,
@@ -215,7 +220,6 @@ export default function PhoneAuthScreen() {
 
   function handleOTPChange(val: string, index: number) {
     if (val.length > 1) {
-      // Handle paste
       const digits = val.replace(/\D/g, '').slice(0, 6).split('');
       const newOtp = [...otp];
       digits.forEach((d, i) => { if (index + i < 6) newOtp[index + i] = d; });
@@ -410,8 +414,6 @@ export default function PhoneAuthScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
