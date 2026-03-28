@@ -37,6 +37,10 @@ export default function TeacherStudentsScreen() {
 
   async function initScreen() {
     const session = await getUserSession();
+    if (!session) {
+      setLoading(false);
+      return;
+    }
     setSchoolId(session.schoolId);
     try {
       const staffSnap = await getDocs(query(
