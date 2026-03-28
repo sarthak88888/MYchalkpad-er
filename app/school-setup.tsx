@@ -70,7 +70,12 @@ export default function SchoolSetupScreen() {
     setSaving(true);
     try {
       const session = await getUserSession();
-      const phone = session.phone;
+      if (!session) {
+        Alert.alert('Session Error', 'Could not retrieve your session. Please login again.');
+        router.replace('/');
+        return;
+      }
+      const phone = session.phone ?? '';
 
       const schoolId = `school_${form.udise_code.trim()}`;
 
