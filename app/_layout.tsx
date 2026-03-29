@@ -48,9 +48,12 @@ export default function RootLayout() {
         registerForPushNotifications(phone);
         switch (role) {
           case 'admin':
+          case 'super_admin':
+          case 'principal':
             router.replace('/admin');
             break;
           case 'teacher':
+          case 'class_teacher':
             router.replace('/teacher');
             break;
           case 'parent':
@@ -58,6 +61,10 @@ export default function RootLayout() {
             break;
           case 'accountant':
             router.replace('/accountant');
+            break;
+          case 'bus_driver':
+          case 'driver':
+            router.replace('/driver');
             break;
           default:
             router.replace('/');
@@ -79,6 +86,7 @@ export default function RootLayout() {
           <Stack.Screen name="teacher" />
           <Stack.Screen name="parents" />
           <Stack.Screen name="accountant" />
+          <Stack.Screen name="driver" />
         </Stack>
       </PaperProvider>
     </SafeAreaProvider>
