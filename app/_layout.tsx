@@ -82,6 +82,8 @@ export default function RootLayout() {
       <PaperProvider theme={paperTheme}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="phone-auth" />
+          <Stack.Screen name="school-setup" />
           <Stack.Screen name="admin" />
           <Stack.Screen name="teacher" />
           <Stack.Screen name="parents" />
