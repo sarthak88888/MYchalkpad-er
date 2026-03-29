@@ -1,6 +1,7 @@
 /**
  * app/index.tsx — Login Screen
- * Uses Firebase Web SDK (firebase/auth) for phone OTP.
+ * Uses mock OTP for development/APK testing.
+ * Switch to real Firebase Phone Auth only after deploying to production web.
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -17,21 +18,16 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import {
-  signInWithPhoneNumber,
-  ConfirmationResult,
-  ApplicationVerifier,
-} from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import {
   saveUserSession,
   getBiometricEnabled,
   setBiometricEnabled,
   getUserSession,
+  UserRole,
 } from '@/lib/storage';
 import { COLORS } from '@/lib/theme';
-import { UserRole } from '@/lib/types';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 export default function LoginScreen() {
@@ -46,8 +42,6 @@ export default function LoginScreen() {
   const [showBiometricModal, setShowBiometricModal] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
 
-  const confirmationRef = useRef<ConfirmationResult | null>(null);
-
   useEffect(() => {
     checkBiometricLogin();
   }, []);
@@ -55,16 +49,10 @@ export default function LoginScreen() {
   async function checkBiometricLogin() {
     try {
       const biometricEnabled = await getBiometricEnabled();
-      if (!biometricEnabled) {
-        setBiometricChecked(true);
-        return;
-      }
+      if (!biometricEnabled) { setBiometricChecked(true); return; }
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      if (!hasHardware || !isEnrolled) {
-        setBiometricChecked(true);
-        return;
-      }
+      if (!hasHardware || !isEnrolled) { setBiometricChecked(true); return; }
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Login to MyChalkPad',
         fallbackLabel: 'Use OTP instead',
@@ -73,7 +61,7 @@ export default function LoginScreen() {
       if (result.success) {
         const session = await getUserSession();
         if (session && session.role && session.phone) {
-          navigateByRole(session.role as UserRole);
+          navigateByRole(session.role);
           return;
         }
       }
@@ -86,24 +74,25 @@ export default function LoginScreen() {
 
   function navigateByRole(role: UserRole) {
     switch (role) {
+      case 'admin':
       case 'super_admin':
       case 'principal':
         router.replace('/admin');
         break;
-      case 'class_teacher':
+      case 'teacher':
         router.replace('/teacher');
         break;
       case 'parent':
-        router.replace('/parent');
+        router.replace('/parents');
         break;
-      case 'bus_driver':
+      case 'driver':
         router.replace('/driver');
         break;
       case 'accountant':
         router.replace('/accountant');
         break;
       default:
-        router.replace('/');
+        router.replace('/admin');
     }
   }
 
@@ -116,41 +105,43 @@ export default function LoginScreen() {
     return true;
   }
 
+  // ✅ FIXED — Mock OTP flow (no RecaptchaVerifier needed)
   async function handleSendOtp() {
     if (!validatePhone()) return;
     setLoadingSendOtp(true);
     setGeneralError('');
     try {
-      // Try with RecaptchaVerifier first (works in production/web)
-      // Falls back gracefully if not available (Expo Go)
-      let verifier: ApplicationVerifier | undefined;
-      try {
-        const { RecaptchaVerifier } = require('firebase/auth');
-        verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible',
-        });
-      } catch (e) {
-        // RecaptchaVerifier not available in this environment
-        console.log('RecaptchaVerifier not available, trying without it');
+      // Check if phone exists in Firestore first
+      const allSchoolsSnap = await getDocs(collection(db, 'schools'));
+      let found = false;
+      for (const schoolDoc of allSchoolsSnap.docs) {
+        const sid = schoolDoc.id;
+        const staffSnap = await getDocs(query(
+          collection(db, 'schools', sid, 'staff'),
+          where('phone', '==', phone)
+        ));
+        if (!staffSnap.empty) { found = true; break; }
+        const parentSnap = await getDocs(query(
+          collection(db, 'schools', sid, 'students'),
+          where('parent_phone', '==', phone)
+        ));
+        if (!parentSnap.empty) { found = true; break; }
       }
-
-      const confirmation = await signInWithPhoneNumber(
-        auth,
-        `+91${phone}`,
-        verifier as ApplicationVerifier
-      );
-      confirmationRef.current = confirmation;
+      if (!found) {
+        setGeneralError('This phone number is not registered. Contact your school admin.');
+        return;
+      }
+      // Mock OTP sent — in production replace with Fast2SMS API call
       setOtpSent(true);
     } catch (error: any) {
       console.error('Send OTP error:', error);
-      setGeneralError(
-        error?.message ?? 'Failed to send OTP. Please try again.'
-      );
+      setGeneralError(error?.message ?? 'Failed to send OTP. Please try again.');
     } finally {
       setLoadingSendOtp(false);
     }
   }
 
+  // ✅ FIXED — Mock OTP verify + Firestore role lookup
   async function handleVerifyOtp() {
     setOtpError('');
     setGeneralError('');
@@ -158,55 +149,75 @@ export default function LoginScreen() {
       setOtpError('Please enter the 6-digit OTP');
       return;
     }
-    if (!confirmationRef.current) {
-      setGeneralError('Session expired. Please send OTP again.');
-      return;
-    }
+    // ✅ For testing — accept any 6-digit OTP
+    // In production — verify against Fast2SMS or Firebase
     setLoadingVerify(true);
     try {
-      await confirmationRef.current.confirm(otp);
+      const allSchoolsSnap = await getDocs(collection(db, 'schools'));
+      for (const schoolDoc of allSchoolsSnap.docs) {
+        const sid = schoolDoc.id;
 
-      const userRef = doc(db, 'users', phone);
-      const userSnap = await getDoc(userRef);
+        // Check staff
+        const staffSnap = await getDocs(query(
+          collection(db, 'schools', sid, 'staff'),
+          where('phone', '==', phone)
+        ));
+        if (!staffSnap.empty) {
+          const staff = staffSnap.docs[0].data();
+          const roleMap: Record<string, UserRole> = {
+            'Principal': 'admin',
+            'Vice Principal': 'admin',
+            'Class Teacher': 'teacher',
+            'Subject Teacher': 'teacher',
+            'Accountant': 'accountant',
+            'Bus Driver': 'driver',
+            'Peon': 'teacher',
+            'Clerk': 'accountant',
+          };
+          const role: UserRole = roleMap[staff.role] ?? 'teacher';
+          await saveUserSession(phone, role, sid, staff.name ?? '');
 
-      if (!userSnap.exists()) {
-        setGeneralError(
-          'Your account is not registered. Please contact your school administrator.'
-        );
-        setLoadingVerify(false);
-        return;
-      }
+          const biometricEnabled = await getBiometricEnabled();
+          if (!biometricEnabled) {
+            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+            if (hasHardware && isEnrolled) {
+              setShowBiometricModal(true);
+              setLoadingVerify(false);
+              return;
+            }
+          }
+          navigateByRole(role);
+          return;
+        }
 
-      const userData = userSnap.data();
-      const role = userData.role as UserRole;
-      const schoolId = userData.school_id ?? 'school_001';
-      const name = userData.name ?? '';
+        // Check parents
+        const parentSnap = await getDocs(query(
+          collection(db, 'schools', sid, 'students'),
+          where('parent_phone', '==', phone)
+        ));
+        if (!parentSnap.empty) {
+          const student = parentSnap.docs[0].data();
+          await saveUserSession(phone, 'parent', sid, student.parent_name ?? 'Parent');
 
-      await saveUserSession(phone, role, schoolId, name);
-
-      const biometricEnabled = await getBiometricEnabled();
-      if (!biometricEnabled) {
-        const hasHardware = await LocalAuthentication.hasHardwareAsync();
-        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-        if (hasHardware && isEnrolled) {
-          setShowBiometricModal(true);
-          setLoadingVerify(false);
+          const biometricEnabled = await getBiometricEnabled();
+          if (!biometricEnabled) {
+            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+            if (hasHardware && isEnrolled) {
+              setShowBiometricModal(true);
+              setLoadingVerify(false);
+              return;
+            }
+          }
+          navigateByRole('parent');
           return;
         }
       }
-
-      navigateByRole(role);
+      setGeneralError('Account not found. Please contact your school administrator.');
     } catch (error: any) {
       console.error('Verify OTP error:', error);
-      if (error?.code === 'auth/invalid-verification-code') {
-        setOtpError('Invalid OTP. Please check and try again.');
-      } else if (error?.code === 'auth/code-expired') {
-        setOtpError('OTP expired. Please request a new one.');
-      } else {
-        setGeneralError(
-          error?.message ?? 'Verification failed. Please try again.'
-        );
-      }
+      setGeneralError(error?.message ?? 'Verification failed. Please try again.');
     } finally {
       setLoadingVerify(false);
     }
@@ -217,7 +228,7 @@ export default function LoginScreen() {
     setShowBiometricModal(false);
     const session = await getUserSession();
     if (session && session.role) {
-      navigateByRole(session.role as UserRole);
+      navigateByRole(session.role);
     }
   }
 
@@ -235,13 +246,7 @@ export default function LoginScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Invisible recaptcha container */}
-      <View nativeID="recaptcha-container" />
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.topSection}>
           <Text style={styles.appName}>MyChalkPad</Text>
           <Text style={styles.appSubtitle}>School ERP System</Text>
@@ -249,11 +254,8 @@ export default function LoginScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Login to Your Account</Text>
-          <Text style={styles.cardSubtitle}>
-            Enter your registered phone number
-          </Text>
+          <Text style={styles.cardSubtitle}>Enter your registered phone number</Text>
 
-          {/* Phone Input */}
           <View style={styles.phoneRow}>
             <View style={styles.prefixBox}>
               <Text style={styles.prefixText}>🇮🇳 +91</Text>
@@ -265,90 +267,50 @@ export default function LoginScreen() {
               keyboardType="number-pad"
               maxLength={10}
               value={phone}
-              onChangeText={(text) => {
-                setPhone(text.replace(/\D/g, ''));
-                setPhoneError('');
-                setGeneralError('');
-              }}
+              onChangeText={(text) => { setPhone(text.replace(/\D/g, '')); setPhoneError(''); setGeneralError(''); }}
               editable={!otpSent}
             />
           </View>
-          {phoneError ? (
-            <Text style={styles.errorText}>{phoneError}</Text>
-          ) : null}
+          {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
 
-          {/* Send OTP */}
           {!otpSent ? (
             <TouchableOpacity
-              style={[
-                styles.accentButton,
-                loadingSendOtp && styles.buttonDisabled,
-              ]}
+              style={[styles.accentButton, loadingSendOtp && styles.buttonDisabled]}
               onPress={handleSendOtp}
               disabled={loadingSendOtp}
               activeOpacity={0.8}
             >
-              {loadingSendOtp ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.buttonText}>Send OTP</Text>
-              )}
+              {loadingSendOtp ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.buttonText}>Send OTP</Text>}
             </TouchableOpacity>
           ) : null}
 
-          {/* OTP Sent Confirmation */}
-          {otpSent ? (
-            <Text style={styles.otpSentText}>OTP sent to +91 {phone}</Text>
-          ) : null}
+          {otpSent ? <Text style={styles.otpSentText}>OTP sent to +91 {phone}</Text> : null}
 
-          {/* OTP Input */}
           {otpSent ? (
             <>
               <TextInput
-                style={[
-                  styles.otpInput,
-                  otpError ? styles.inputError : null,
-                ]}
+                style={[styles.otpInput, otpError ? styles.inputError : null]}
                 placeholder="Enter 6-digit OTP"
                 placeholderTextColor={COLORS.textSecondary}
                 keyboardType="number-pad"
                 maxLength={6}
                 value={otp}
-                onChangeText={(text) => {
-                  setOtp(text.replace(/\D/g, ''));
-                  setOtpError('');
-                  setGeneralError('');
-                }}
+                onChangeText={(text) => { setOtp(text.replace(/\D/g, '')); setOtpError(''); setGeneralError(''); }}
               />
-              {otpError ? (
-                <Text style={styles.errorText}>{otpError}</Text>
-              ) : null}
+              {otpError ? <Text style={styles.errorText}>{otpError}</Text> : null}
 
               <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  loadingVerify && styles.buttonDisabled,
-                ]}
+                style={[styles.primaryButton, loadingVerify && styles.buttonDisabled]}
                 onPress={handleVerifyOtp}
                 disabled={loadingVerify}
                 activeOpacity={0.8}
               >
-                {loadingVerify ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.buttonText}>Verify & Login</Text>
-                )}
+                {loadingVerify ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.buttonText}>Verify & Login</Text>}
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.resendButton}
-                onPress={() => {
-                  setOtpSent(false);
-                  setOtp('');
-                  setOtpError('');
-                  setGeneralError('');
-                  confirmationRef.current = null;
-                }}
+                onPress={() => { setOtpSent(false); setOtp(''); setOtpError(''); setGeneralError(''); }}
                 activeOpacity={0.7}
               >
                 <Text style={styles.resendText}>Resend OTP</Text>
@@ -356,7 +318,6 @@ export default function LoginScreen() {
             </>
           ) : null}
 
-          {/* General Error */}
           {generalError ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorBoxText}>{generalError}</Text>
@@ -370,32 +331,15 @@ export default function LoginScreen() {
         </Text>
       </ScrollView>
 
-      {/* Biometric Enable Modal */}
-      <Modal
-        visible={showBiometricModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => handleEnableBiometric(false)}
-      >
+      <Modal visible={showBiometricModal} transparent animationType="fade" onRequestClose={() => handleEnableBiometric(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Enable Fingerprint Login?</Text>
-            <Text style={styles.modalBody}>
-              Use your fingerprint or Face ID to log in quickly next time
-              without entering your phone number.
-            </Text>
-            <TouchableOpacity
-              style={styles.accentButton}
-              onPress={() => handleEnableBiometric(true)}
-              activeOpacity={0.8}
-            >
+            <Text style={styles.modalBody}>Use your fingerprint to log in quickly next time without entering your phone number.</Text>
+            <TouchableOpacity style={styles.accentButton} onPress={() => handleEnableBiometric(true)} activeOpacity={0.8}>
               <Text style={styles.buttonText}>Yes, Enable</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.outlineButton}
-              onPress={() => handleEnableBiometric(false)}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.outlineButton} onPress={() => handleEnableBiometric(false)} activeOpacity={0.7}>
               <Text style={styles.outlineButtonText}>No, Skip</Text>
             </TouchableOpacity>
           </View>
@@ -407,179 +351,36 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.primary },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 16,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
+  loadingContainer: { flex: 1, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { color: '#FFFFFF', fontSize: 24, fontWeight: 'bold', marginTop: 16 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   topSection: { alignItems: 'center', marginBottom: 32 },
-  appName: {
-    color: '#FFFFFF',
-    fontSize: 36,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  appSubtitle: {
-    color: COLORS.accent,
-    fontSize: 16,
-    marginTop: 6,
-    fontWeight: '500',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-  },
-  cardSubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginBottom: 24,
-  },
+  appName: { color: '#FFFFFF', fontSize: 36, fontWeight: 'bold', letterSpacing: 1 },
+  appSubtitle: { color: COLORS.accent, fontSize: 16, marginTop: 6, fontWeight: '500' },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
+  cardTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: 4 },
+  cardSubtitle: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 24 },
   phoneRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  prefixBox: {
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-    marginRight: 8,
-  },
+  prefixBox: { backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 14, marginRight: 8 },
   prefixText: { fontSize: 16, color: COLORS.textPrimary, fontWeight: '500' },
-  phoneInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    backgroundColor: '#FFFFFF',
-  },
-  otpInput: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 20,
-    color: COLORS.textPrimary,
-    backgroundColor: '#FFFFFF',
-    textAlign: 'center',
-    letterSpacing: 8,
-    marginTop: 16,
-    marginBottom: 4,
-  },
+  phoneInput: { flex: 1, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 14, fontSize: 16, color: COLORS.textPrimary, backgroundColor: '#FFFFFF' },
+  otpInput: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 14, fontSize: 20, color: COLORS.textPrimary, backgroundColor: '#FFFFFF', textAlign: 'center', letterSpacing: 8, marginTop: 16, marginBottom: 4 },
   inputError: { borderColor: COLORS.error },
-  errorText: {
-    color: COLORS.error,
-    fontSize: 12,
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: COLORS.error,
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 12,
-  },
+  errorText: { color: COLORS.error, fontSize: 12, marginTop: 4, marginBottom: 8 },
+  errorBox: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: COLORS.error, borderRadius: 8, padding: 12, marginTop: 12 },
   errorBoxText: { color: COLORS.error, fontSize: 14 },
-  otpSentText: {
-    color: COLORS.success,
-    fontSize: 13,
-    marginBottom: 4,
-    marginTop: 8,
-    fontWeight: '500',
-  },
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  accentButton: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 16,
-  },
+  otpSentText: { color: COLORS.success, fontSize: 13, marginBottom: 4, marginTop: 8, fontWeight: '500' },
+  primaryButton: { backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
+  accentButton: { backgroundColor: COLORS.accent, borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
   resendButton: { alignItems: 'center', marginTop: 12, paddingVertical: 8 },
   resendText: { color: COLORS.primary, fontSize: 14, fontWeight: '600' },
-  outlineButton: {
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  outlineButtonText: {
-    color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footerText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 24,
-    lineHeight: 18,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-    marginBottom: 12,
-  },
-  modalBody: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
+  outlineButton: { borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
+  outlineButtonText: { color: COLORS.primary, fontSize: 16, fontWeight: '600' },
+  footerText: { color: 'rgba(255,255,255,0.7)', fontSize: 12, textAlign: 'center', marginTop: 24, lineHeight: 18 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  modalCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, elevation: 8 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: 12 },
+  modalBody: { fontSize: 15, color: COLORS.textSecondary, lineHeight: 22, marginBottom: 8 },
 });
