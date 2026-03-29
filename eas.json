@@ -11,7 +11,10 @@
     "preview": {
       "distribution": "internal",
       "android": { 
-        "buildType": "apk" 
+        "buildType": "apk"
+      },
+      "env": {
+        "GOOGLE_SERVICES_JSON": "$GOOGLE_SERVICES_JSON"
       }
     },
     "production-apk": {
@@ -19,6 +22,9 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "GOOGLE_SERVICES_JSON": "$GOOGLE_SERVICES_JSON"
       }
     },
     "production-aab": {
@@ -26,6 +32,9 @@
       "android": {
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease"
+      },
+      "env": {
+        "GOOGLE_SERVICES_JSON": "$GOOGLE_SERVICES_JSON"
       }
     },
     "production-ios": {
