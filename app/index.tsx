@@ -1,11 +1,6 @@
 /**
  * app/index.tsx — Login Screen
- *
  * Uses Firebase Web SDK (firebase/auth) for phone OTP.
- * Compatible with Expo Go for testing.
- *
- * For production builds, switch to @react-native-firebase/auth
- * for better performance and Play Integrity support.
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -25,7 +20,7 @@ import { router } from 'expo-router';
 import {
   signInWithPhoneNumber,
   ConfirmationResult,
-  RecaptchaVerifier,
+  ApplicationVerifier,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -126,16 +121,23 @@ export default function LoginScreen() {
     setLoadingSendOtp(true);
     setGeneralError('');
     try {
-      // RecaptchaVerifier works in Expo Go via the web Firebase SDK
-      const recaptchaVerifier = new RecaptchaVerifier(
-        auth,
-        'recaptcha-container',
-        { size: 'invisible' }
-      );
+      // Try with RecaptchaVerifier first (works in production/web)
+      // Falls back gracefully if not available (Expo Go)
+      let verifier: ApplicationVerifier | undefined;
+      try {
+        const { RecaptchaVerifier } = require('firebase/auth');
+        verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+        });
+      } catch (e) {
+        // RecaptchaVerifier not available in this environment
+        console.log('RecaptchaVerifier not available, trying without it');
+      }
+
       const confirmation = await signInWithPhoneNumber(
         auth,
         `+91${phone}`,
-        recaptchaVerifier
+        verifier as ApplicationVerifier
       );
       confirmationRef.current = confirmation;
       setOtpSent(true);
@@ -233,7 +235,7 @@ export default function LoginScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Invisible recaptcha container required by Firebase Web SDK */}
+      {/* Invisible recaptcha container */}
       <View nativeID="recaptcha-container" />
 
       <ScrollView
