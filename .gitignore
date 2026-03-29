@@ -20,7 +20,7 @@ yarn-error.log*
 .env.development
 
 # Firebase — CRITICAL, contains private keys
-google-services.json
+#google-services.json
 GoogleService-Info.plist
 
 # EAS
