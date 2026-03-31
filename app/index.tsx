@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
+  ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -179,6 +179,7 @@ export default function LoginScreen() {
       for (const schoolDoc of allSchoolsSnap.docs) {
         const sid = schoolDoc.id;
 
+        // Check staff
         const staffSnap = await getDocs(query(
           collection(db, 'schools', sid, 'staff'),
           where('phone', '==', phone)
@@ -197,27 +198,11 @@ export default function LoginScreen() {
           };
           const role: UserRole = roleMap[staff.role] ?? 'teacher';
           await saveUserSession(phone, role, sid, staff.name ?? '');
-
-          // ← DEBUG ALERT — remove after fixing
-          Alert.alert(
-            'Debug Info',
-            `Staff Role in DB: "${staff.role}"\nMapped to: "${role}"\nSchool ID: "${sid}"\nNavigating to: /${role === 'admin' ? 'admin' : role}`
-          );
-
-          const biometricEnabled = await getBiometricEnabled();
-          if (!biometricEnabled) {
-            const hasHardware = await LocalAuthentication.hasHardwareAsync();
-            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-            if (hasHardware && isEnrolled) {
-              setShowBiometricModal(true);
-              setLoadingVerify(false);
-              return;
-            }
-          }
           navigateByRole(role);
           return;
         }
 
+        // Check parents
         const parentSnap = await getDocs(query(
           collection(db, 'schools', sid, 'students'),
           where('parent_phone', '==', phone)
@@ -225,23 +210,6 @@ export default function LoginScreen() {
         if (!parentSnap.empty) {
           const student = parentSnap.docs[0].data();
           await saveUserSession(phone, 'parent', sid, student.parent_name ?? 'Parent');
-
-          // ← DEBUG ALERT — remove after fixing
-          Alert.alert(
-            'Debug Info',
-            `Parent found!\nSchool ID: "${sid}"\nNavigating to: /parents`
-          );
-
-          const biometricEnabled = await getBiometricEnabled();
-          if (!biometricEnabled) {
-            const hasHardware = await LocalAuthentication.hasHardwareAsync();
-            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-            if (hasHardware && isEnrolled) {
-              setShowBiometricModal(true);
-              setLoadingVerify(false);
-              return;
-            }
-          }
           navigateByRole('parent');
           return;
         }
