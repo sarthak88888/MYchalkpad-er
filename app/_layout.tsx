@@ -1,14 +1,8 @@
 import { useEffect } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
-import { onAuthStateChanged } from '@/lib/firebase';
-import { saveUserSession } from '@/lib/storage';
 import { loadLanguage } from '@/lib/i18n';
-import { registerForPushNotifications } from '@/lib/notifications';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { UserRole } from '@/lib/types';
 import { COLORS } from '@/lib/theme';
 
 const paperTheme = {
@@ -24,57 +18,6 @@ const paperTheme = {
 export default function RootLayout() {
   useEffect(() => {
     loadLanguage();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(async (user) => {
-      if (!user) {
-        router.replace('/');
-        return;
-      }
-      try {
-        const phone = user.phoneNumber?.replace('+91', '') ?? '';
-        const userRef = doc(db, 'users', phone);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          router.replace('/');
-          return;
-        }
-        const userData = userSnap.data();
-        const role = userData.role as UserRole;
-        const schoolId = userData.school_id ?? 'school_001';
-        const name = userData.name ?? '';
-        await saveUserSession(phone, role, schoolId, name);
-        registerForPushNotifications(phone);
-        switch (role) {
-          case 'admin':
-          case 'super_admin':
-          case 'principal':
-            router.replace('/admin');
-            break;
-          case 'teacher':
-          case 'class_teacher':
-            router.replace('/teacher');
-            break;
-          case 'parent':
-            router.replace('/parents');
-            break;
-          case 'accountant':
-            router.replace('/accountant');
-            break;
-          case 'bus_driver':
-          case 'driver':
-            router.replace('/driver');
-            break;
-          default:
-            router.replace('/');
-        }
-      } catch (error) {
-        console.error('Auth state change error:', error);
-        router.replace('/');
-      }
-    });
-    return () => unsubscribe();
   }, []);
 
   return (
