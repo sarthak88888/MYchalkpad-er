@@ -56,7 +56,6 @@ export default function AdminLayout() {
           <Text style={styles.offlineText}>No Internet Connection</Text>
         </View>
       )}
-
       <Tabs
         screenOptions={{
           headerShown: false,
