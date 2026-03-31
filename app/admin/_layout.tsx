@@ -15,8 +15,9 @@ export default function AdminLayout() {
     getUserSession().then((session) => {
       if (
         !session ||
-       ( session.role !== 'super_admin' &&
-        session.role !== 'principal')
+        (session.role !== 'admin' &&
+         session.role !== 'super_admin' &&
+         session.role !== 'principal')
       ) {
         router.replace('/');
       } else {
@@ -24,12 +25,10 @@ export default function AdminLayout() {
       }
     });
 
-    // ✅ NEW — Offline connection checker
     const unsubscribe = NetInfo.addEventListener((state) => {
       setIsConnected(!!state.isConnected);
     });
 
-    // ✅ NEW — Notification permission for Android 13+
     async function requestNotificationPermission() {
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') {
@@ -43,14 +42,7 @@ export default function AdminLayout() {
 
   if (checking) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: COLORS.background,
-        }}
-      >
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
         <ActivityIndicator color={COLORS.primary} size="large" />
       </View>
     );
@@ -58,8 +50,6 @@ export default function AdminLayout() {
 
   return (
     <View style={{ flex: 1 }}>
-
-      {/* ✅ NEW — Offline Banner */}
       {!isConnected && (
         <View style={styles.offlineBanner}>
           <MaterialCommunityIcons name="wifi-off" size={16} color="#FFFFFF" />
@@ -84,10 +74,7 @@ export default function AdminLayout() {
             paddingBottom: 8,
             paddingTop: 4,
           },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '600',
-          },
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         }}
       >
         <Tabs.Screen
@@ -95,11 +82,7 @@ export default function AdminLayout() {
           options={{
             title: 'Dashboard',
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons
-                name="view-dashboard"
-                color={color}
-                size={size}
-              />
+              <MaterialCommunityIcons name="view-dashboard" color={color} size={size} />
             ),
           }}
         />
@@ -108,11 +91,7 @@ export default function AdminLayout() {
           options={{
             title: 'Students',
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons
-                name="account-group"
-                color={color}
-                size={size}
-              />
+              <MaterialCommunityIcons name="account-group" color={color} size={size} />
             ),
           }}
         />
@@ -121,11 +100,7 @@ export default function AdminLayout() {
           options={{
             title: 'Reports',
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons
-                name="chart-bar"
-                color={color}
-                size={size}
-              />
+              <MaterialCommunityIcons name="chart-bar" color={color} size={size} />
             ),
           }}
         />
@@ -143,7 +118,6 @@ export default function AdminLayout() {
   );
 }
 
-// ✅ NEW STYLES — only for offline banner
 const styles = StyleSheet.create({
   offlineBanner: {
     backgroundColor: '#EF4444',
