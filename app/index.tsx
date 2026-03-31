@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -33,7 +33,6 @@ export default function LoginScreen() {
   const [biometricChecked, setBiometricChecked] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
-  // Store generated OTP in ref (not state)
   const generatedOtpRef = useRef<string>('');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -121,7 +120,6 @@ export default function LoginScreen() {
     setLoadingSendOtp(true);
     setGeneralError('');
     try {
-      // Step 1 — Check phone exists in Firestore
       const allSchoolsSnap = await getDocs(collection(db, 'schools'));
       let found = false;
       for (const schoolDoc of allSchoolsSnap.docs) {
@@ -142,11 +140,9 @@ export default function LoginScreen() {
         return;
       }
 
-      // Step 2 — Generate real 6-digit OTP
       const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
       generatedOtpRef.current = newOtp;
 
-      // Step 3 — Send via Fast2SMS
       const message = `Your MyChalkPad OTP is: ${newOtp}. Valid for 10 minutes. Do not share.`;
       const result = await sendSMS([phone], message);
       if (!result.success) {
@@ -172,7 +168,6 @@ export default function LoginScreen() {
       return;
     }
 
-    // Verify OTP matches
     if (otp !== generatedOtpRef.current) {
       setOtpError('Invalid OTP. Please check and try again.');
       return;
@@ -184,7 +179,6 @@ export default function LoginScreen() {
       for (const schoolDoc of allSchoolsSnap.docs) {
         const sid = schoolDoc.id;
 
-        // Check staff
         const staffSnap = await getDocs(query(
           collection(db, 'schools', sid, 'staff'),
           where('phone', '==', phone)
@@ -203,6 +197,13 @@ export default function LoginScreen() {
           };
           const role: UserRole = roleMap[staff.role] ?? 'teacher';
           await saveUserSession(phone, role, sid, staff.name ?? '');
+
+          // ← DEBUG ALERT — remove after fixing
+          Alert.alert(
+            'Debug Info',
+            `Staff Role in DB: "${staff.role}"\nMapped to: "${role}"\nSchool ID: "${sid}"\nNavigating to: /${role === 'admin' ? 'admin' : role}`
+          );
+
           const biometricEnabled = await getBiometricEnabled();
           if (!biometricEnabled) {
             const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -217,7 +218,6 @@ export default function LoginScreen() {
           return;
         }
 
-        // Check parents
         const parentSnap = await getDocs(query(
           collection(db, 'schools', sid, 'students'),
           where('parent_phone', '==', phone)
@@ -225,6 +225,13 @@ export default function LoginScreen() {
         if (!parentSnap.empty) {
           const student = parentSnap.docs[0].data();
           await saveUserSession(phone, 'parent', sid, student.parent_name ?? 'Parent');
+
+          // ← DEBUG ALERT — remove after fixing
+          Alert.alert(
+            'Debug Info',
+            `Parent found!\nSchool ID: "${sid}"\nNavigating to: /parents`
+          );
+
           const biometricEnabled = await getBiometricEnabled();
           if (!biometricEnabled) {
             const hasHardware = await LocalAuthentication.hasHardwareAsync();
