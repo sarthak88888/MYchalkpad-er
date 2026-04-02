@@ -25,41 +25,62 @@ export default function RootLayout() {
   useEffect(() => {
     loadLanguage();
 
+    //  Safety fallback (prevents infinite white screen)
+    const timeout = setTimeout(() => {
+      console.log("⏱ Fallback triggered → going to login");
+      setLoading(false);
+      router.replace('/');
+    }, 3000);
+
     const unsubscribe = onAuthStateChanged(async (user) => {
-      if (user) {
-        // ✅ user logged in → get role
-        const session = await getUserSession();
+      clearTimeout(timeout);
 
-        if (session?.role) {
-          // route based on role
-          const routes: Record<string, string> = {
-            admin: '/admin',
-            super_admin: '/admin',
-            principal: '/admin',
-            teacher: '/teacher',
-            class_teacher: '/teacher',
-            parent: '/parents',
-            accountant: '/accountant',
-            driver: '/driver',
-            bus_driver: '/driver',
-          };
+      console.log(" Auth state:", user);
 
-          router.replace(routes[session.role] || '/admin');
+      try {
+        if (user) {
+          const session = await getUserSession();
+
+          if (session?.role) {
+            const routes: Record<string, string> = {
+              admin: '/admin',
+              super_admin: '/admin',
+              principal: '/admin',
+              teacher: '/teacher',
+              class_teacher: '/teacher',
+              parent: '/parents',
+              accountant: '/accountant',
+              driver: '/driver',
+              bus_driver: '/driver',
+            };
+
+            const route = routes[session.role] || '/admin';
+            console.log(" Redirecting to:", route);
+
+            router.replace(route);
+          } else {
+            console.log(" No session role → going login");
+            router.replace('/');
+          }
         } else {
+          console.log(" No user → going login");
           router.replace('/');
         }
-      } else {
-        // ❌ not logged in
+      } catch (err) {
+        console.log(" Error in auth flow:", err);
         router.replace('/');
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, []);
 
-  // ✅ prevent flicker / wrong redirect
+  //  Loading screen (prevents blank UI)
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
