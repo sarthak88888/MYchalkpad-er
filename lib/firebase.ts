@@ -1,15 +1,15 @@
 import Constants from 'expo-constants';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  getAuth,
+  initializeAuth,
+  getReactNativePersistence,
   signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   User,
 } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-
-const extra = Constants.expoConfig?.extra ?? {};
 
 const firebaseConfig = {
   apiKey: "AIzaSyBPkCc1b0mDOGM8uoTtjtvItaQdqYLR8Qo",
@@ -23,7 +23,13 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-export const auth = getAuth(app);
+
+//  FIXED AUTH (PERSISTENT LOGIN)
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
+
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
